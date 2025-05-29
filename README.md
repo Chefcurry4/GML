@@ -66,9 +66,9 @@ Arguments:
 - `INTERPOLATION_METHOD`: Choose from ['remove', 'mean', 'median', 'ffill', 'bfill', 'linear', 'tikhonov', 'joint']
 
 Options:
-- `--force-retrain`: Force retraining even if saved models exist
-- `--data-subset-time-days N`: Use only N days of data
-- `--data-subset-turbines N`: Use only N turbines
+- `--force-retrain`: Force retraining even if saved models exist (NOTE THAT TRAINING A MODEL WITH THE WHOLE DATASET REQUIRES HOURS)
+- `--data-subset-time-days N`: Use only N days of data (this might still not work perfectly)
+- `--data-subset-turbines N`: Use only N turbines (this might still not work perfectly)
 
 Examples:
 ```bash
@@ -84,9 +84,9 @@ python GML/main.py GRU mean --force-retrain
 
 ### Cleanup Old Models
 
-To remove old model checkpoints and keep only the latest:
+To remove old model checkpoints and keep only the latest: (this might still not work perfectly)
 ```bash
-python GML/cleanup.py
+python GML/cleanup.py 
 ```
 
 ## ⚙️ Configuration
@@ -132,17 +132,28 @@ Required data files:
 - Independent GRU for each turbine
 - Predicts future power output based on temporal patterns
 - Handles missing data through interpolation
+  (NOTE: this is not a GNN model but I choose it cause I know that Gated Recurrent Unit (GRU) is a type of recurrent neural network (RNN) that's designed to handle sequential data more effectively than 
+   traditional RNNs. It's particularly useful for tasks like natural language processing, speech recognition, and time series prediction. THIS MODEL REACHED A R^2 score >= 0.95 on the whole dataset (very high)).
 
-### GNN Model
+### GNN Model ((this still does not work perfectly: must be refined also looking at professor suggestions. We might even opt for more than 1 GNN model.)
 - Single model for all turbines
 - Captures both spatial and temporal dependencies
 - Uses product graph structure
 - Handles missing data through joint learning
 
-## 📈 Outputs
+## 📋 Outputs
 
 The models produce:
 1. Trained model checkpoints in `GML/trained_models/`
 2. Predictions in `output/predictions/`
 3. Evaluation metrics in `output/experiment_results.csv`
 4. Optional statistics plots in `output/stats_plots/`
+
+## 📈 Next steps
+
+1. Modify the training pipeline to make it faster (maybe craft a smaller dataset) otherwise we'll take ages to test and train the models.
+2. Work extensively on the GNN model introducing all professor suggestions. For now, there's basically no progress in that direction (see point 3.).
+3. For now I did NOT address scalability, did NOT try suggested architectures like MPNNs / Attention / others, ecc.
+
+
+   
