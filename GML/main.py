@@ -14,11 +14,23 @@ from sklearn.preprocessing import MinMaxScaler # Import MinMaxScaler
 import time # For overall timing
 from torch.utils.data import DataLoader, Subset # Import DataLoader and Subset
 from torch_geometric.data import Batch # Import Batch from torch_geometric.data
+import argparse # Add argparse
 
 
 # Set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(DEVICE_SELECTION if DEVICE_SELECTION == "cuda" and torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+
+# Add argument parser
+parser = argparse.ArgumentParser(description='Train and evaluate wind power forecasting models')
+parser.add_argument('model_type', choices=['GRU', 'GNN', 'BOTH'], help='Type of model to train')
+parser.add_argument('interpolation_method', choices=['remove', 'mean', 'median', 'ffill', 'bfill', 'linear', 'tikhonov', 'joint'], help='Method for handling missing data')
+parser.add_argument('--force-retrain', action='store_true', help='Force retraining even if model exists')
+parser.add_argument('--data-subset-time-days', type=int, help='Number of days to use for training (default: all)')
+parser.add_argument('--data-subset-turbines', type=int, help='Number of turbines to use for training (default: all)')
+
+args = parser.parse_args()
 
 # Custom collate function factory for PyG Batch (handles normalization and placeholders)
 def gnn_collate_fn_factory(product_edge_index_template, product_edge_attr_template, num_turbines_in_batch, scalers_dict, features_to_norm_list, all_input_features_list, placeholder_val, use_mask_feat):
@@ -146,9 +158,13 @@ def run_experiment(
     data_subset_turbines=None, # List of turbine IDs or None for all
     data_subset_time_days=None, # Number of days or None for all
     # Add parameter to control scaler fitting for baselines vs GNN
-    fit_scaler_on_train_subset=True
+    fit_scaler_on_train_subset=True,
+    force_retrain=False # Add force_retrain parameter
 ):
     """Runs a single experiment with specified configuration."""
+    # Convert model_type to lowercase for case-insensitive comparison
+    model_type = model_type.lower()
+    
     exp_name = f"Model={model_type}_Interp={interpolation_method}"
     if data_subset_turbines is not None: exp_name += f"_Turbines={len(data_subset_turbines)}"
     if data_subset_time_days is not None: exp_name += f"_Time={data_subset_time_days}days"
@@ -158,35 +174,41 @@ def run_experiment(
     start_time_data = time.time()
     scada_df_orig, location_df_orig = load_data(SCADA_DATA_PATH, LOCATION_DATA_PATH)
 
+    # Create Tm column from Day and Tmstamp if needed
+    if 'Tm' not in scada_df_orig.columns and 'Day' in scada_df_orig.columns and 'Tmstamp' in scada_df_orig.columns:
+        base_date = pd.Timestamp('2020-01-01')  # Using an arbitrary base date
+        day_delta = pd.to_timedelta(scada_df_orig['Day'] - 1, unit='D')
+        time_delta = pd.to_timedelta(scada_df_orig['Tmstamp'] + ':00')
+        scada_df_orig['Tm'] = base_date + day_delta + time_delta
+    elif 'Tm' not in scada_df_orig.columns:
+        raise ValueError("Data must contain either 'Tm' column or both 'Day' and 'Tmstamp' columns")
+
     # Apply turbine subsetting
     if data_subset_turbines is not None:
+        # Get the first N turbine IDs
+        all_turbine_ids = sorted(location_df_orig['TurbID'].unique())
+        selected_turbines = all_turbine_ids[:data_subset_turbines]
+        
         # Ensure location_df only contains specified turbines, sorted
-        location_df = location_df_orig[location_df_orig['TurbID'].isin(data_subset_turbines)].sort_values('TurbID').reset_index(drop=True).copy()
+        location_df = location_df_orig[location_df_orig['TurbID'].isin(selected_turbines)].sort_values('TurbID').reset_index(drop=True).copy()
         # Ensure scada_df only contains specified turbines
-        scada_df = scada_df_orig[scada_df_orig['TurbID'].isin(data_subset_turbines)].copy()
-        # Ensure turbine IDs in scada_df are sorted consistently for pivot
-        scada_df['TurbID'] = pd.Categorical(scada_df['TurbID'], categories=sorted(data_subset_turbines), ordered=True)
-        scada_df = scada_df.sort_values(['Tm', 'TurbID']).reset_index(drop=True)
-        current_turb_ids = sorted(data_subset_turbines)
+        scada_df = scada_df_orig[scada_df_orig['TurbID'].isin(selected_turbines)].copy()
+        current_turb_ids = selected_turbines
     else:
         location_df = location_df_orig.copy()
         scada_df = scada_df_orig.copy()
-        # Get all turbine IDs from original location data for consistency
         current_turb_ids = sorted(location_df_orig['TurbID'].unique())
-        # Filter location_df to just these IDs if needed (it should be all by default)
-        location_df = location_df_orig[location_df_orig['TurbID'].isin(current_turb_ids)].sort_values('TurbID').reset_index(drop=True).copy()
 
     current_num_turbines = len(current_turb_ids)
     if current_num_turbines == 0:
          print("Error: No turbines selected or found after subsetting.")
          return
 
-
     # Apply time subsetting
     if data_subset_time_days is not None:
-        start_date = scada_df['Tm'].min()
+        start_date = pd.to_datetime(scada_df['Tm'].min())
         end_date = start_date + pd.Timedelta(days=data_subset_time_days)
-        scada_df = scada_df[scada_df['Tm'] < end_date].copy() # Use < to include start day but exclude end day + 1
+        scada_df = scada_df[pd.to_datetime(scada_df['Tm']) < end_date].copy()
 
     if scada_df.empty:
         print("Error: No SCADA data found after time subsetting.")
@@ -342,12 +364,13 @@ def run_experiment(
     if model_type == 'gnn':
         print("Creating GNN DataLoaders with custom collate_fn...")
         # Build the spatial graph once (needed by the collate_fn)
-        spatial_graph, locations = build_spatial_graph(location_df, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS)
+        edge_index, edge_attr, locations = build_spatial_graph(location_df, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS)
         # Build temporal graph template for the window size (needed by collate_fn)
         temporal_graph_template = build_temporal_graph(INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE)
         # Build product graph template (for the window size) - used by GNN collate_fn
         product_edge_index_template, product_edge_attr_template = build_product_graph(
-            spatial_graph,
+            edge_index,
+            edge_attr,
             temporal_graph_template,
             current_num_turbines, # Use num turbines in the current subset
             INPUT_SEQUENCE_LENGTH
@@ -401,21 +424,26 @@ def run_experiment(
         # GRU needs number of features per turbine as input dim
         # The dataset object within the loader has the original num_features_per_turbine
         num_features_per_turbine = train_loader.dataset.dataset.num_features_per_turbine
-        trained_model, scalability_metrics = train_gru_model(
-            train_loader, val_loader, current_num_turbines, device
+        gru_models, gru_scalability_metrics = train_gru_model(
+            train_loader, val_loader, current_num_turbines, device, force_retrain=force_retrain
         )
+        trained_model = gru_models  
+        scalability_metrics = gru_scalability_metrics  
+        print(f"GRU training completed. Scalability metrics: {gru_scalability_metrics}")
 
     elif model_type == 'gnn':
         # GNN needs input feature dimension (original features + mask if used)
         num_features_per_turbine = train_loader.dataset.dataset.num_features_per_turbine
         # The GNN model init needs the correct initial_input_dim calculated based on mask usage
         # This is calculated inside train_gnn_model now.
-        trained_model, scalability_metrics = train_gnn_model(
+        gnn_model, gnn_scalability_metrics = train_gnn_model(
             train_loader, val_loader, # Pass loaders (contain graph structure via collate_fn)
             current_num_turbines, # Pass num_turbines
             num_features_per_turbine, # Pass num features per turbine
-            device
+            device,
+            force_retrain=force_retrain # Pass force_retrain
         )
+        print(f"GNN training completed. Scalability: {gnn_scalability_metrics}")
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -476,106 +504,34 @@ def run_experiment(
 
 
 if __name__ == "__main__":
-    # Define Scalability Subsets (requires loading data first)
-    try:
-        _, location_df_orig_all = load_data(SCADA_DATA_PATH, LOCATION_DATA_PATH)
-        ALL_TURBINE_IDS = sorted(location_df_orig_all['TurbID'].unique())
-        # Define subsets based on the number of available turbines
-        SCALABILITY_TURBINE_SUBSETS = [10, 50, len(ALL_TURBINE_IDS)] # Test with varying numbers of turbines
-        # Ensure subsets don't exceed available turbines
-        SCALABILITY_TURBINE_SUBSETS = [n for n in SCALABILITY_TURBINE_SUBSETS if n <= len(ALL_TURBINE_IDS)]
-        if len(ALL_TURBINE_IDS) not in SCALABILITY_TURBINE_SUBSETS:
-             SCALABILITY_TURBINE_SUBSETS.append(len(ALL_TURBINE_IDS)) # Always include all turbines
-        SCALABILITY_TURBINE_SUBSETS = sorted(list(set(SCALABILITY_TURBINE_SUBSETS)))
+    print(f"Running with Model Type: {args.model_type}, Interpolation: {args.interpolation_method}, Force Retrain: {args.force_retrain}")
 
-
-        # Define time subsets (in days)
-        # Need total time steps available to pick reasonable days
-        # A rough estimate: 245 days * 24 hours/day * 6 steps/hour = 35280 steps
-        # 30 days ~ 4320 steps, 90 days ~ 12960 steps
-        SCALABILITY_TIME_SUBSETS_DAYS = [30, 90, 245] # Test with varying total time periods (approximate days)
-        # Ensure subsets don't exceed available time (based on file description)
-        # The max time steps is ~245 days. No strict check needed beyond config.
-        SCALABILITY_TIME_SUBSETS_DAYS = sorted(list(set(SCALABILITY_TIME_SUBSETS_DAYS)))
-
-
-    except FileNotFoundError:
-        print("Data files not found. Cannot define scalability subsets based on actual data.")
-        ALL_TURBINE_IDS = list(range(1, 135)) # Default to 1-134 if data not found
-        SCALABILITY_TURBINE_SUBSETS = [10, 50, 134]
-        SCALABILITY_TIME_SUBSETS_DAYS = [30, 90, 245]
-
-
-    print("Ensure data is in the ./data/ directory. Download links:")
-    print("[1] SDWPF: https://bj.bcebos.com/v1/ai-studio-online/85b5cb4eea5a4f259766f42a7499c43elae4cc28fbdee8e087e2385.zip")
-    print("[2] Location: https://bj.bcebos.com/v1/ai-studio-online/e927ce742c884955bf2a667929d36b2ef41c572cd6e245fa86257ecc2f7be7bc.zip")
-    print("Extract both zip files into the ./data/ directory.")
-    print("-" * 30)
-
-
-    # --- Define Experiments ---
-    # Configurations: (model_type, interpolation_method, turbine_subset_ids, time_subset_days)
-    # None for subset means use all available data after initial load/filter
-
-    experiment_configs = [
-        # Baseline 1: GRU per turbine with simple imputation
-        ('gru', 'mean', None, None),
-
-        # Baseline 1 (more advanced): GRU with Tikhonov interpolation
-        ('gru', 'tikhonov', None, None),
-
-        # Main Approach: Product Graph GNN with joint interpolation
-        ('gnn', 'joint', None, None),
-
-        # Scalability Experiments for GNN (vary turbines, full time)
-        # Note: Subset turbine IDs by taking the first N from the sorted list
-        # Example: ALL_TURBINE_IDS[:num_t]
-        # (GNN experiments will disable scaler fitting here as it's handled in collate)
-        *[(
-            'gnn',
-            'joint',
-            ALL_TURBINE_IDS[:num_t], # Subset turbine IDs
-            None # Use all time steps for this subset
-        ) for num_t in SCALABILITY_TURBINE_SUBSETS if num_t > 0], # Ensure num_t is positive
-
-        # Scalability Experiments for GNN (vary time, all turbines)
-        # (GNN experiments will disable scaler fitting here as it's handled in collate)
-        *[(
-            'gnn',
-            'joint',
-            None, # Use all turbines
-            num_days # Subset time in days
-        ) for num_days in SCALABILITY_TIME_SUBSETS_DAYS if num_days > 0] # Ensure num_days is positive
-
-    ]
-
-    # Filter out duplicate configurations (e.g., if 134 turbines is in SCALABILITY_TURBINE_SUBSETS and None is used for full)
-    # Simple representation for set: tuple of (type, interp, tuple(turb_ids), days)
-    seen_configs = set()
-    unique_configs = []
-    for cfg in experiment_configs:
-        cfg_key = (cfg[0], cfg[1], tuple(cfg[2]) if cfg[2] is not None else None, cfg[3])
-        if cfg_key not in seen_configs:
-            unique_configs.append(cfg)
-            seen_configs.add(cfg_key)
-        # else:
-            # print(f"Skipping duplicate configuration: {cfg}")
-
-
-    # --- Run Experiments ---
-    for cfg in unique_configs:
-        model_type, interpolation_method, subset_turb_ids, subset_time_days = cfg
-        # Pass fit_scaler=True for baselines, it will be handled within run_experiment
-        # For GNN joint, run_experiment will fit scalers but apply them in collate
-        # Pass the subset_turb_ids (list) to run_experiment
+    if args.model_type == "BOTH":
+        print("\nRunning for GRU model...")
         run_experiment(
-            model_type,
-            interpolation_method,
-            data_subset_turbines=subset_turb_ids,
-            data_subset_time_days=subset_time_days,
-            fit_scaler_on_train_subset=True # Always fit scaler if possible
+            model_type="gru",  # Use lowercase
+            interpolation_method=args.interpolation_method, 
+            force_retrain=args.force_retrain,
+            data_subset_turbines=list(range(args.data_subset_turbines)) if args.data_subset_turbines else None,
+            data_subset_time_days=args.data_subset_time_days
+        )
+        print("\nRunning for GNN model...")
+        run_experiment(
+            model_type="gnn",  # Use lowercase
+            interpolation_method=args.interpolation_method, 
+            force_retrain=args.force_retrain,
+            data_subset_turbines=list(range(args.data_subset_turbines)) if args.data_subset_turbines else None,
+            data_subset_time_days=args.data_subset_time_days
+        )
+    else:
+        run_experiment(
+            model_type=args.model_type.lower(),  # Convert to lowercase
+            interpolation_method=args.interpolation_method, 
+            force_retrain=args.force_retrain,
+            data_subset_turbines=list(range(args.data_subset_turbines)) if args.data_subset_turbines else None,
+            data_subset_time_days=args.data_subset_time_days
         )
 
-    print("\nAll scheduled experiments finished.")
+    print("\nAll experiments finished.")
     print(f"Results summary saved in {OUTPUT_DIR}/experiment_results.csv")
     print(f"Predictions saved in {PREDICTIONS_DIR}") 

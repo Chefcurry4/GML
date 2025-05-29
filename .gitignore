@@ -1,0 +1,38 @@
+# Data files
+data/
+*.csv
+GML/data/
+GML/data/*.csv
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Model checkpoints and outputs
+output/
+GML/trained_models/
+trained_models/
+checkpoints/
+*.pt
+
+# Logs
+*.log
+
+# OS specific
+.DS_Store
+Thumbs.db 

@@ -1,0 +1,2 @@
+experiment_name,model_type,interpolation_method,num_turbines_in_experiment,total_time_steps_in_experiment_data,input_seq_len,output_seq_len,train_split_ratio,val_split_ratio,test_split_ratio,batch_size,learning_rate,num_epochs,patience,MAE,RMSE,R2,training_time_sec,peak_memory_mb,num_turbines,total_time_steps_trained_on
+Model=gru_Interp=mean,gru,mean,134,35016,12,1,0.7,0.15,0.15,32,0.001,20,10,8688.6796875,24940.343542140712,0.9584625959396362,0,3598.2109375,134,0

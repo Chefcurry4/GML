@@ -21,8 +21,24 @@ def load_data(scada_path, location_path):
 
 def preprocess_scada_data(df, input_features):
     """Cleans and structures SCADA data."""
-    # Assuming 'TurbID' and 'Tm' are identifier columns
-    df['Tm'] = pd.to_datetime(df['Tm'])
+    # Create Tm column from Day and Tmstamp if it doesn't exist
+    if 'Tm' not in df.columns and 'Day' in df.columns and 'Tmstamp' in df.columns:
+        # Convert Day to timedelta and add to a base date
+        base_date = pd.Timestamp('2020-01-01')  # Using an arbitrary base date
+        day_delta = pd.to_timedelta(df['Day'] - 1, unit='D')
+        
+        # Convert HH:MM to timedelta by adding ':00' for seconds
+        time_delta = pd.to_timedelta(df['Tmstamp'] + ':00')
+        
+        # Combine both into datetime
+        df['Tm'] = base_date + day_delta + time_delta
+        
+        # Drop the original Day and Tmstamp columns
+        df = df.drop(['Day', 'Tmstamp'], axis=1)
+    elif 'Tm' in df.columns:
+        df['Tm'] = pd.to_datetime(df['Tm'])
+    else:
+        raise ValueError("Data must contain either 'Tm' column or both 'Day' and 'Tmstamp' columns")
 
     # Ensure all turbines are present if subsetting was applied upstream
     # The pivot operation naturally handles the turbines present in the df
@@ -37,7 +53,6 @@ def preprocess_scada_data(df, input_features):
     # Pivot table might not preserve exact order, explicitly reorder
     expected_cols = pd.MultiIndex.from_product([input_features, turbine_ids], names=['Feature', 'TurbineID'])
     pivot_df = pivot_df[expected_cols]
-
 
     return pivot_df, turbine_ids, input_features
 

@@ -135,8 +135,8 @@ def evaluate_model(model, data_loader, device, model_type, scaler=None):
          print("Applying inverse normalization...")
          # Reshape predictions and actuals to (TotalWindows * out_seq_len, num_turbines)
          # for easier column-wise inverse scaling per turbine
-         predictions_reshaped_for_scaling = predictions.squeeze(-1).transpose(1, 2).reshape(-1, num_turbines) # (TotalWindows * out_seq_len, num_turbines)
-         actuals_reshaped_for_scaling = actuals.squeeze(-1).transpose(1, 2).reshape(-1, num_turbines)
+         predictions_reshaped_for_scaling = predictions.squeeze(-1).reshape(-1, num_turbines) # (TotalWindows * out_seq_len, num_turbines)
+         actuals_reshaped_for_scaling = actuals.squeeze(-1).reshape(-1, num_turbines)
 
          # Apply inverse normalization using the function in utils
          unscaled_predictions_reshaped = inverse_normalize_target(
@@ -154,7 +154,7 @@ def evaluate_model(model, data_loader, device, model_type, scaler=None):
 
          # Flatten the unscaled data for metric calculation, applying the mask
          # The mask needs to be reshaped to match the unscaled data shape
-         masks_reshaped_for_scaling = masks.squeeze(-1).transpose(1, 2).reshape(-1, num_turbines)
+         masks_reshaped_for_scaling = masks.squeeze(-1).reshape(-1, num_turbines)
          unscaled_masks_flat = masks_reshaped_for_scaling.flatten() # True indicates missing
 
          actuals_known = unscaled_actuals_reshaped.flatten()[~unscaled_masks_flat]
