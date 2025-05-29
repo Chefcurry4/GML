@@ -1,127 +1,148 @@
-# 🌪️ Wind Power Forecasting with Product Graph Neural Networks
+# Wind Power Forecasting with GNN and GRU Models
 
-## 🎯 Project Overview
+This project implements wind power forecasting using both Graph Neural Networks (GNN) and Gated Recurrent Units (GRU). It handles spatial-temporal data from multiple wind turbines, incorporating both temporal dependencies and spatial relationships between turbines.
 
-This project implements a sophisticated approach to wind power forecasting using Product Graph Neural Networks (GNNs). The system uniquely combines **joint forecasting and missing data interpolation** through a product graph structure that captures both spatial relationships between wind turbines and temporal dependencies in the data.
+## 📋 Table of Contents
+- [Installation](#installation)
+- [Project Structure](#project-structure)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Data Format](#data-format)
+- [Models](#models)
 
-## 🔑 Key Features
+## 🔧 Installation
 
-### 1. 📊 Joint Interpolation & Forecasting
-- Product Graph GNN architecture that handles missing data and forecasting simultaneously
-- Innovative placeholder system with optional masking for missing values
-- Real-time interpolation during the forecasting process
-
-### 2. 📈 Scalability Analysis
-- Comprehensive testing on varying subsets of turbines and time periods
-- Performance metrics tracking (training time, memory usage)
-- Scalability evaluation with different dataset sizes
-
-### 3. 🕸️ Product Graph Architecture
-- Combines spatial (turbine locations) and temporal dimensions
-- Smart node indexing: `time_step_in_window * num_turbines + turbine_id`
-- Flexible graph construction with e-ball or k-NN approaches
-
-### 4. 🔄 Data Processing
-- Tikhonov regularization for baseline interpolation
-- MinMaxScaler normalization with training-data-only fitting
-- Custom collate function for GNN batching with placeholder handling
-
-## 🏗️ Project Structure
-
-```
-├── config.py                    # Configuration parameters and settings
-├── utils.py                     # Data loading, preprocessing, and utility functions
-├── graph_construction.py        # Spatial, temporal, and product graph builders
-├── missing_data_handling.py     # Interpolation methods including Tikhonov
-├── models/
-│   ├── gru.py                   # GRU baseline model
-│   └── product_graph_gnn.py     # Main Product Graph GNN implementation
-├── data/
-│   ├── turbine_location.csv     # Turbines x-y location
-│   └── wind_power_sdwpf.csv     # Main dataset 
-├── requirements.txt             # Install necessary dependencies
-├── training.py                  # Training loops and procedures
-├── evaluation.py                # Metrics calculation and evaluation
-└── main.py                      # Experiment orchestration
+1. Clone the repository:
+```bash
+git clone [your-repo-url]
+cd GML
 ```
 
-## 🛠️ Technical Components
+2. Create a virtual environment (recommended):
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-### Data Processing
-- SCADA data preprocessing
-- Missing data identification
-- Custom TimeSeriesSlidingWindowDataset
-- Specialized dataloaders with custom collate functions
-
-### Models
-1. **Product Graph GNN**
-   - Joint interpolation-forecasting architecture
-   - Batched product graph handling
-   - Dynamic node embedding extraction
-
-2. **GRU Baseline**
-   - Traditional sequence modeling
-   - Pre-interpolated data processing
-
-### Evaluation Metrics
-- MAE (Mean Absolute Error)
-- RMSE (Root Mean Square Error)
-- R² Score
-- Training time and memory usage metrics
-
-## 🚀 Getting Started
-
-1. Install dependencies:
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Configure your experiment in `config.py`:
-   - Set data paths
-   - Adjust preprocessing parameters
-   - Configure model hyperparameters
-   - Set scalability testing parameters
+Note: PyTorch Geometric installation might require specific CUDA versions. Follow the official [PyTorch Geometric installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html) for your setup.
 
-3. Run experiments:
-```bash
-python main.py
+## 🏗️ Project Structure
+
+```
+GML/
+├── data/                    # Data directory
+│   ├── wind_power_sdwpf.csv    # SCADA data
+│   └── turbine_location.CSV    # Turbine location data
+├── models/                  # Model architectures
+│   ├── gru.py                  # GRU model implementation
+│   └── product_graph_gnn.py    # GNN model implementation
+├── config.py               # Configuration parameters
+├── main.py                # Main training script
+├── training.py            # Training loop implementations
+├── evaluation.py          # Model evaluation functions
+├── graph_construction.py  # Graph building utilities
+├── utils.py              # Utility functions
+├── missing_data_handling.py # Missing data interpolation
+├── datasets_stats.py     # Dataset statistics
+└── cleanup.py           # Utility for cleaning model files
 ```
 
-## 📊 Evaluation
+## 🚀 Usage
 
-The system evaluates:
-- Forecast accuracy on non-missing target values
-- Interpolation quality
-- Computational efficiency
-- Memory usage across different dataset sizes
+### Basic Training
 
-## 🔧 Implementation Details
+Train a model using:
+```bash
+python GML/main.py [MODEL_TYPE] [INTERPOLATION_METHOD] [OPTIONS]
+```
 
-### Graph Construction
-- Spatial graphs: e-ball or k-NN based on turbine locations
-- Temporal graphs: sequential connections with optional skip connections
-- Product graphs: combined spatial-temporal representation
+Arguments:
+- `MODEL_TYPE`: Choose from ['GRU', 'GNN', 'BOTH']
+- `INTERPOLATION_METHOD`: Choose from ['remove', 'mean', 'median', 'ffill', 'bfill', 'linear', 'tikhonov', 'joint']
 
-### Training Process
-- Early stopping
-- Model checkpointing
-- Scalability metrics collection
-- Custom loss functions for joint optimization
+Options:
+- `--force-retrain`: Force retraining even if saved models exist
+- `--data-subset-time-days N`: Use only N days of data
+- `--data-subset-turbines N`: Use only N turbines
 
-## 📝 Notes
+Examples:
+```bash
+# Train GNN model with joint interpolation
+python GML/main.py GNN joint
 
-- GPU acceleration supported (automatically detected)
-- Modular design for easy extension
-- Comprehensive logging and metric tracking
-- Flexible configuration system
+# Train both models with mean interpolation using subset of data
+python GML/main.py BOTH mean --data-subset-time-days 30 --data-subset-turbines 5
 
-## 🤝 Contributing
+# Force retrain GRU model
+python GML/main.py GRU mean --force-retrain
+```
 
-Feel free to open issues or submit pull requests for improvements or bug fixes.
+### Cleanup Old Models
 
-## 📚 References
+To remove old model checkpoints and keep only the latest:
+```bash
+python GML/cleanup.py
+```
 
-- Product Graph Neural Networks
-- Tikhonov Regularization
-- Time Series Forecasting with GNNs
-- Missing Data Interpolation Techniques 
+## ⚙️ Configuration
+
+Key parameters in `config.py`:
+
+### Data Processing
+- `INPUT_FEATURES`: List of features to use
+- `TARGET_FEATURE`: Target feature to predict (default: 'Patv')
+- `INPUT_SEQUENCE_LENGTH`: Number of past time steps (default: 12)
+- `OUTPUT_SEQUENCE_LENGTH`: Number of future steps to predict (default: 1)
+
+### Training Parameters
+- `BATCH_SIZE`: Batch size (default: 64)
+- `LEARNING_RATE`: Learning rate (default: 0.0015)
+- `NUM_EPOCHS`: Maximum epochs (default: 25)
+- `PATIENCE`: Early stopping patience (default: 5)
+
+### Model Parameters
+- `GRU_HIDDEN_DIM`: GRU hidden dimension (default: 32)
+- `GNN_HIDDEN_DIM`: GNN hidden dimension (default: 32)
+- `GNN_NUM_LAYERS`: Number of GNN layers (default: 2)
+- `GNN_DROPOUT`: Dropout rate (default: 0.2)
+
+## 📊 Data Format
+
+Required data files:
+1. `wind_power_sdwpf.csv`: SCADA data with columns:
+   - Day: Day number
+   - Tmstamp: Time stamp
+   - TurbID: Turbine ID
+   - Patv: Active power
+   - [Other features...]
+
+2. `turbine_location.CSV`: Turbine locations with columns:
+   - TurbID: Turbine ID
+   - X: X coordinate
+   - Y: Y coordinate
+
+## 🤖 Models
+
+### GRU Model
+- Independent GRU for each turbine
+- Predicts future power output based on temporal patterns
+- Handles missing data through interpolation
+
+### GNN Model
+- Single model for all turbines
+- Captures both spatial and temporal dependencies
+- Uses product graph structure
+- Handles missing data through joint learning
+
+## 📈 Outputs
+
+The models produce:
+1. Trained model checkpoints in `GML/trained_models/`
+2. Predictions in `output/predictions/`
+3. Evaluation metrics in `output/experiment_results.csv`
+4. Optional statistics plots in `output/stats_plots/`
