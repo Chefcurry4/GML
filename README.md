@@ -54,6 +54,14 @@ GML/
 
 ## 🚀 Usage
 
+### Download Data
+
+Before you can start using the model, you need to download the dataset. This can be done using the script `download_data.py` script.
+
+```bash
+python GML/download_data.py
+```
+
 ### Basic Training
 
 Train a model using:

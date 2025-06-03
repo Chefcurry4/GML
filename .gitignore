@@ -3,6 +3,7 @@ data/
 *.csv
 GML/data/
 GML/data/*.csv
+GML/data/*.CSV
 
 # Python cache files
 __pycache__/

@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch_geometric.data import Data, Batch # Import Batch
 import torch.cuda.memory as memory # For more granular memory tracking
-import resource # For maxrss
 import time
 import os
 import pandas as pd
@@ -14,6 +13,17 @@ from config import * # Import all from config
 from models.gru import GRUModel
 from models.product_graph_gnn import ProductGraphGNN, TARGET_FEATURE_INDEX # Import TARGET_FEATURE_INDEX
 from evaluation import evaluate_model, calculate_scalability_metrics # Import from evaluation
+
+# --- Cross-platform memory usage import ---
+try:
+    import resource  # Unix only
+    def get_peak_memory_mb():
+        return get_peak_memory_mb()
+except ImportError:
+    import psutil  # Windows fallback (requires pip install psutil)
+    def get_peak_memory_mb():
+        process = psutil.Process(os.getpid())
+        return process.memory_info().peak_wset / (1024 * 1024) if hasattr(process.memory_info(), 'peak_wset') else process.memory_info().rss / (1024 * 1024)
 
 # Define the directory for saving trained models
 TRAINED_MODELS_DIR = "GML/trained_models"
@@ -165,7 +175,7 @@ def train_gru_model(train_loader, val_loader, num_turbines, device, force_retrai
             # For now, let's return the models and a minimal metrics dict.
             scalability_metrics = {
                 'training_time_sec': 0,
-                'peak_memory_mb': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, # Current memory
+                'peak_memory_mb': get_peak_memory_mb(), # Current memory
                 'num_turbines': num_turbines,
                 'total_time_steps_trained_on': 0
             }
@@ -190,7 +200,7 @@ def train_gru_model(train_loader, val_loader, num_turbines, device, force_retrai
     # Timer and Memory Tracker
     start_time = time.time()
     # Note: Tracking memory for multiple independent models in one process is tricky.
-    # resource.ru_maxrss tracks the peak for the whole process.
+    # get_peak_memory_mb() tracks the peak for the whole process.
     # For GRU, this might just reflect the largest model/batch loaded at any point.
     # True scalability for GRU is per-model performance.
     peak_memory_mb = 0
@@ -251,7 +261,7 @@ def train_gru_model(train_loader, val_loader, num_turbines, device, force_retrai
 
             num_train_batches += 1
             # Track memory usage
-            peak_memory_mb = max(peak_memory_mb, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024) # on Linux/macOS
+            peak_memory_mb = max(peak_memory_mb, get_peak_memory_mb()) # on Linux/macOS
 
 
         # --- Validation ---
@@ -289,7 +299,7 @@ def train_gru_model(train_loader, val_loader, num_turbines, device, force_retrai
                     total_val_loss[turb_id] += loss.item()
 
                 num_val_batches += 1
-                peak_memory_mb = max(peak_memory_mb, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)
+                peak_memory_mb = max(peak_memory_mb, get_peak_memory_mb())
 
 
         # Calculate average losses
@@ -395,7 +405,7 @@ def train_gnn_model(train_loader, val_loader, num_turbines, num_features_per_tur
             # Return early with loaded model and minimal metrics
             return model, {
                 'training_time_sec': 0,
-                'peak_memory_mb': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+                'peak_memory_mb': get_peak_memory_mb(),
                 'num_turbines': num_turbines,
                 'total_time_steps_trained_on': 0
             }
@@ -435,7 +445,7 @@ def train_gnn_model(train_loader, val_loader, num_turbines, num_features_per_tur
             
             total_train_loss += loss.item()
             num_train_batches += 1
-            peak_memory_mb = max(peak_memory_mb, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)
+            peak_memory_mb = max(peak_memory_mb, get_peak_memory_mb())
         
         avg_train_loss = total_train_loss / num_train_batches if num_train_batches > 0 else float('inf')
         
@@ -459,7 +469,7 @@ def train_gnn_model(train_loader, val_loader, num_turbines, num_features_per_tur
                 
                 total_val_loss += val_loss.item()
                 num_val_batches += 1
-                peak_memory_mb = max(peak_memory_mb, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)
+                peak_memory_mb = max(peak_memory_mb, get_peak_memory_mb())
         
         avg_val_loss = total_val_loss / num_val_batches if num_val_batches > 0 else float('inf')
         
