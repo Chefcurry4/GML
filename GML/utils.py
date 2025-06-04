@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader, Subset
 import os
 from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, INPUT_FEATURES, TARGET_FEATURE, FEATURES_TO_NORMALIZE, MISSING_VALUE_PLACEHOLDER_GNN
 
+
 def load_data(scada_path, location_path):
     """Loads SCADA and location data."""
     if not os.path.exists(scada_path):

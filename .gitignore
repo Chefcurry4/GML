@@ -36,3 +36,5 @@ checkpoints/
 # OS specific
 .DS_Store
 Thumbs.db 
+
+check.ipynb

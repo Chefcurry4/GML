@@ -155,7 +155,7 @@ def gnn_collate_fn_factory(product_edge_index_template, product_edge_attr_templa
 def run_experiment(
     model_type,
     interpolation_method, # 'remove', 'mean', 'median', 'ffill', 'bfill', 'tikhonov', 'joint'
-    data_subset_turbines=None, # List of turbine IDs or None for all
+    data_subset_turbines=None, # integer: number of turbines IDs or None for all
     data_subset_time_days=None, # Number of days or None for all
     # Add parameter to control scaler fitting for baselines vs GNN
     fit_scaler_on_train_subset=True,
@@ -166,7 +166,7 @@ def run_experiment(
     model_type = model_type.lower()
     
     exp_name = f"Model={model_type}_Interp={interpolation_method}"
-    if data_subset_turbines is not None: exp_name += f"_Turbines={len(data_subset_turbines)}"
+    if data_subset_turbines is not None: exp_name += f"_Turbines={data_subset_turbines}"
     if data_subset_time_days is not None: exp_name += f"_Time={data_subset_time_days}days"
     print(f"\n--- Running Experiment: {exp_name} ---")
 
@@ -187,6 +187,8 @@ def run_experiment(
     if data_subset_turbines is not None:
         # Get the first N turbine IDs
         all_turbine_ids = sorted(location_df_orig['TurbID'].unique())
+        if not isinstance(data_subset_turbines, int):
+            raise ValueError("data_subset_turbines must be an integer (number of turbines to use)")
         selected_turbines = all_turbine_ids[:data_subset_turbines]
         
         # Ensure location_df only contains specified turbines, sorted
@@ -512,7 +514,7 @@ if __name__ == "__main__":
             model_type="gru",  # Use lowercase
             interpolation_method=args.interpolation_method, 
             force_retrain=args.force_retrain,
-            data_subset_turbines=list(range(args.data_subset_turbines)) if args.data_subset_turbines else None,
+            data_subset_turbines=args.data_subset_turbines,
             data_subset_time_days=args.data_subset_time_days
         )
         print("\nRunning for GNN model...")
@@ -520,18 +522,18 @@ if __name__ == "__main__":
             model_type="gnn",  # Use lowercase
             interpolation_method=args.interpolation_method, 
             force_retrain=args.force_retrain,
-            data_subset_turbines=list(range(args.data_subset_turbines)) if args.data_subset_turbines else None,
+            data_subset_turbines=args.data_subset_turbines,
             data_subset_time_days=args.data_subset_time_days
         )
     else:
         run_experiment(
-            model_type=args.model_type.lower(),  # Convert to lowercase
+            model_type=args.model_type.lower(),
             interpolation_method=args.interpolation_method, 
             force_retrain=args.force_retrain,
-            data_subset_turbines=list(range(args.data_subset_turbines)) if args.data_subset_turbines else None,
+            data_subset_turbines=args.data_subset_turbines,
             data_subset_time_days=args.data_subset_time_days
         )
 
     print("\nAll experiments finished.")
     print(f"Results summary saved in {OUTPUT_DIR}/experiment_results.csv")
-    print(f"Predictions saved in {PREDICTIONS_DIR}") 
+    print(f"Predictions saved in {PREDICTIONS_DIR}")
