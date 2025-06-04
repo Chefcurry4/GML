@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np # Import numpy for nan handling
 from utils import load_data, preprocess_scada_data, identify_missing_data, create_dataloaders, TimeSeriesSlidingWindowDataset # Import TimeSeriesSlidingWindowDataset
-from graph_construction import build_spatial_graph, build_temporal_graph, build_product_graph
+from graph_construction import build_spatial_graph, build_temporal_graph, build_spatio_temporal_product, build_product_graph
 from missing_data_handling import simple_interpolate, tikhonov_interpolation_product_graph
 from training import train_gru_model, train_gnn_model
 from evaluation import evaluate_model, calculate_scalability_metrics, save_predictions
@@ -16,7 +16,7 @@ import time # For overall timing
 from torch.utils.data import DataLoader, Subset # Import DataLoader and Subset
 from torch_geometric.data import Batch # Import Batch from torch_geometric.data
 import argparse # Add argparse
-from utils import visualize_spatial_graph
+from utils import visualize_spatial_graph, visualize_temporal_graph, visualize_spatio_temporal_graph
 
 
 # Set device
@@ -35,10 +35,10 @@ parser.add_argument('--data-subset-turbines', type=int, help='Number of turbines
 args = parser.parse_args()
 
 # Custom collate function factory for PyG Batch (handles normalization and placeholders)
-def gnn_collate_fn_factory(product_edge_index_template, product_edge_attr_template, num_turbines_in_batch, scalers_dict, features_to_norm_list, all_input_features_list, placeholder_val, use_mask_feat):
+def gnn_collate_fn_factory(spatio_temporal_edge_index, spatio_temporal_edge_attr, num_turbines_in_batch, scalers_dict, features_to_norm_list, all_input_features_list, placeholder_val, use_mask_feat):
     # Renamed factory arguments for clarity and to avoid clashes if Pylance is confused.
-    # p_edge_index -> product_edge_index_template
-    # p_edge_attr -> product_edge_attr_template
+    # p_edge_index -> spatio_temporal_edge_index
+    # p_edge_attr -> spatio_temporal_edge_attr
     # num_t -> num_turbines_in_batch
     # scalers -> scalers_dict
     # features_to_normalize -> features_to_norm_list
@@ -120,13 +120,13 @@ def gnn_collate_fn_factory(product_edge_index_template, product_edge_attr_templa
         batch_vector_for_pyg = torch.arange(num_samples_in_this_batch, dtype=torch.long).repeat_interleave(num_nodes_per_window_instance)
 
         # Create batched edge_index and edge_attr
-        # The product_edge_index_template and product_edge_attr_template are for a single window/graph.
+        # The spatio_temporal_edge_index and spatio_temporal_edge_attr are for a single window/graph.
         batched_edge_indices_list = []
         batched_edge_attrs_list = []
         for i in range(num_samples_in_this_batch):
             offset = i * num_nodes_per_window_instance # Offset node indices for each graph in the batch
-            batched_edge_indices_list.append(product_edge_index_template + offset)
-            batched_edge_attrs_list.append(product_edge_attr_template) # Attributes are the same for each window's graph structure
+            batched_edge_indices_list.append(spatio_temporal_edge_index + offset)
+            batched_edge_attrs_list.append(spatio_temporal_edge_attr) # Attributes are the same for each window's graph structure
 
         final_batched_edge_index = torch.cat(batched_edge_indices_list, dim=1)
         final_batched_edge_attr = torch.cat(batched_edge_attrs_list, dim=0)
@@ -365,35 +365,61 @@ def run_experiment(
     collate_fn_to_use = None
     if model_type == 'gnn':
         print("Creating GNN DataLoaders with custom collate_fn...")
+
+        # Make sure directory to save images exists
+        timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        images_path = f"GML/images/{timestamp_str}"
+        os.makedirs(images_path, exist_ok=True)
+
         # Build the spatial graph once (needed by the collate_fn)
-        edge_index, edge_attr, locations = build_spatial_graph(location_df, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS)
+        edge_index_spatial, edge_attr_spatial, locations = build_spatial_graph(location_df, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS)
 
         # Visualize the spatial graph and store the image
-        timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         visualize_spatial_graph(
-            edge_index,
+            edge_index_spatial,
             locations,
-            edge_attr=edge_attr,
-            save_path=f"GML/images/spatial_graph_gnn_{timestamp_str}.png",
+            edge_attr=edge_attr_spatial,
+            save_path=f"{images_path}/spatial_graph_gnn.png",
         )
 
         # Build temporal graph template for the window size (needed by collate_fn)
-        temporal_graph_template = build_temporal_graph(INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE)
-        # Build product graph template (for the window size) - used by GNN collate_fn
-        product_edge_index_template, product_edge_attr_template = build_product_graph(
-            edge_index,
-            edge_attr,
-            temporal_graph_template,
-            current_num_turbines, # Use num turbines in the current subset
-            INPUT_SEQUENCE_LENGTH
+        temp_edge_index = build_temporal_graph(INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE)
+
+        # Visualize the temporal graph
+        visualize_temporal_graph(
+            temp_edge_index,
+            num_time_steps=INPUT_SEQUENCE_LENGTH,
+            save_path=f"{images_path}/temporal_graph_gnn.png"
         )
-        if product_edge_index_template.numel() == 0 and current_num_turbines > 0 and INPUT_SEQUENCE_LENGTH > 0:
-             print("Warning: Product graph template is empty, but data exists. Check graph construction parameters.")
+        
+        # Build the spatio-temporal product graph 
+        spatio_temporal_edge_index, spatio_temporal_edge_attr = build_spatio_temporal_product(
+            spatial_edge_index=edge_index_spatial,
+            spatial_edge_attr=edge_attr_spatial,
+            N=current_num_turbines,
+            temporal_edge_index=temp_edge_index,
+            T=INPUT_SEQUENCE_LENGTH
+        )
+        # Visualize the spatio-temporal product graph
+        visualize_spatio_temporal_graph(
+            st_edge_index=spatio_temporal_edge_index,
+            locations=locations,
+            N=current_num_turbines,
+            T=INPUT_SEQUENCE_LENGTH,
+            time_offset=4*1800,            # horizontal separation between layers
+            save_path=f"{images_path}/spatio_temporal_product_graph_gnn.png",
+            node_size=5
+        )
+
+
+
+        if spatio_temporal_edge_index.numel() == 0 and current_num_turbines > 0 and INPUT_SEQUENCE_LENGTH > 0:
+            print("Warning: Product graph template is empty, but data exists. Check graph construction parameters.")
 
         # Create GNN collate fn using the factory
         collate_fn_to_use = gnn_collate_fn_factory(
-            product_edge_index_template, # Pass the template graph structure
-            product_edge_attr_template,  # Pass the template graph attributes
+            spatio_temporal_edge_index, # Pass the template graph structure
+            spatio_temporal_edge_attr,  # Pass the template graph attributes
             current_num_turbines,    # Num turbines in the subset for this experiment
             scalers,                 # Dictionary of fitted scalers
             FEATURES_TO_NORMALIZE,   # List of feature names to normalize

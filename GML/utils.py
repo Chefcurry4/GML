@@ -263,3 +263,155 @@ def visualize_spatial_graph(
     plt.savefig(save_path, dpi=dpi)
     plt.close()
     print(f"Spatial graph saved to {save_path}")
+
+
+
+def visualize_temporal_graph(
+    temporal_edge_index: torch.Tensor,
+    num_time_steps: int,
+    save_path: str = "temporal_graph.png",
+    node_size: int = 30,
+    node_color: str = "blue",
+    edge_color: str = "gray",
+    edge_width: float = 0.5,
+    dpi: int = 500
+):
+    """
+    Visualize and save a 2D plot of the temporal graph.
+    Each time step is shown as a column, with edges between time steps.
+    Args:
+        temporal_edge_index: torch.Tensor of shape (2, num_edges)
+        num_time_steps: int, number of time steps (nodes)
+        save_path: path to save the image
+        node_size: size of nodes
+        node_color: color of nodes
+        edge_color: color of edges
+        edge_width: width of edges
+        dpi: resolution of saved figure
+    """
+    G = nx.DiGraph()
+    # Add nodes for each time step
+    for t in range(num_time_steps):
+        G.add_node(t, pos=(t, 0))  # Place nodes in a row
+
+    # Add edges
+    ei = temporal_edge_index.cpu().numpy() if isinstance(temporal_edge_index, torch.Tensor) else temporal_edge_index
+    for u, v in zip(ei[0], ei[1]):
+        G.add_edge(int(u), int(v))
+
+    pos = nx.get_node_attributes(G, 'pos')
+
+    plt.figure(figsize=(num_time_steps, 2))
+    nx.draw_networkx_nodes(G, pos, node_size=node_size, node_color=node_color)
+    nx.draw_networkx_edges(G, pos, edge_color=edge_color, width=edge_width, arrows=True, arrowstyle='-|>')
+    nx.draw_networkx_labels(G, pos, font_size=10)
+    plt.title("Temporal Graph")
+    plt.axis('off')
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path, dpi=dpi)
+    plt.close()
+    print(f"Temporal graph saved to {save_path}")
+
+
+
+def visualize_spatio_temporal_graph(
+    st_edge_index: torch.Tensor,
+    locations: np.ndarray,
+    N: int,
+    T: int,
+    time_offset: float = 1.0,
+    save_path: str = "spatio_temporal_graph.png",
+    node_size: int = 30,
+    node_color: str = "blue",
+    spatial_edge_color: str = "gray",
+    temporal_edge_color: str = "red",
+    spatial_edge_width: float = 0.5,
+    temporal_edge_width: float = 0.2,
+    dpi: int = 500
+):
+    """
+    Visualize and save a 2D plot of the spatio‐temporal product graph.
+    Each time‐layer is offset horizontally by `time_offset`. Spatial edges (within the same layer)
+    are drawn in `spatial_edge_color`; temporal edges (connecting across layers) in `temporal_edge_color`.
+
+    Args:
+        st_edge_index:        torch.Tensor of shape (2, num_edges) for the product graph on N*T nodes.
+        locations:            np.ndarray of shape (N, 2) with base x,y coordinates per spatial node.
+        N:                    Number of spatial nodes (per time slice).
+        T:                    Number of time layers.
+        time_offset:          Horizontal shift applied to each time layer.
+        save_path:            Path to save the resulting figure.
+        node_size:            Size of each plotted node.
+        node_color:           Color applied to all nodes.
+        spatial_edge_color:   Color for edges within the same time layer.
+        temporal_edge_color:  Color for edges between consecutive layers.
+        spatial_edge_width:   Line‐width for spatial edges.
+        temporal_edge_width:  Line‐width for temporal edges.
+        dpi:                  Resolution (dots per inch) for the saved figure.
+    """
+
+    G = nx.Graph()
+    num_nodes = N * T
+
+    # 1) Add all nodes with 2D "pos" attribute: (x + t*time_offset, y).
+    #    Node IDs run from 0 to N*T - 1; for node_id, spatial_idx = node_id % N, time_idx = node_id // N.
+    for node_id in range(num_nodes):
+        spatial_idx = node_id % N
+        time_idx = node_id // N
+        x, y = locations[spatial_idx]
+        G.add_node(node_id, pos=(float(x) + time_idx * time_offset, float(y)))
+
+    # 2) Separate spatial vs. temporal edges from st_edge_index
+    ei = st_edge_index.cpu().numpy() if isinstance(st_edge_index, torch.Tensor) else st_edge_index
+    all_edges = list(zip(ei[0].tolist(), ei[1].tolist()))
+
+    spatial_edges = []
+    temporal_edges = []
+    for u, v in all_edges:
+        t_u = u // N
+        t_v = v // N
+        if t_u == t_v:
+            # Same time layer → spatial edge
+            spatial_edges.append((int(u), int(v)))
+        else:
+            # Different time layer → temporal edge
+            temporal_edges.append((int(u), int(v)))
+
+    # 3) Extract positions
+    pos = nx.get_node_attributes(G, 'pos')
+
+    # 4) Plot
+    fig, ax = plt.subplots(figsize=(8, 8))
+    nx.draw_networkx_nodes(
+        G,
+        pos,
+        node_size=node_size,
+        node_color=node_color,
+        ax=ax
+    )
+    if spatial_edges:
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=spatial_edges,
+            edge_color=spatial_edge_color,
+            width=spatial_edge_width,
+            ax=ax
+        )
+    if temporal_edges:
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=temporal_edges,
+            edge_color=temporal_edge_color,
+            width=temporal_edge_width,
+            ax=ax
+        )
+
+    ax.set_aspect('equal')
+    ax.axis('off')
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=dpi)
+    plt.close()
+    print(f"Spatio‐temporal graph saved to {save_path}")
