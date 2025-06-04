@@ -19,7 +19,7 @@ OUTPUT_SEQUENCE_LENGTH = 1 # Number of future time steps to predict (e.g., 10 mi
 
 # Graph Construction
 SPATIAL_GRAPH_TYPE = 'radius'  # 'radius' or 'knn'
-SPATIAL_RADIUS = 1000  # Radius for radius-based graph
+SPATIAL_RADIUS = 1500  # Radius for radius-based graph
 K_NEIGHBORS = 5  # Number of neighbors for kNN graph
 TEMPORAL_GRAPH_TYPE = 'sequential'  # Only sequential supported for now
 
