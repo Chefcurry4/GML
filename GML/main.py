@@ -455,6 +455,7 @@ def run_experiment(
             device,
             force_retrain=force_retrain # Pass force_retrain
         )
+        trained_model = gnn_model
         print(f"GNN training completed. Scalability: {gnn_scalability_metrics}")
     else:
         raise ValueError(f"Unknown model type: {model_type}")

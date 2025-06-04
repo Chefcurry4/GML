@@ -91,22 +91,39 @@ def evaluate_model(model, data_loader, device, model_type, scaler=None):
 
 
             elif model_type == 'gnn':
-                 # GNN data is a PyG Batch object
-                 batch_data = batch_data.to(device)
-                 batch_predictions = model(batch_data) # (batch_size, num_turbines, out_seq_len, 1)
+                # GNN data is a PyG Batch object
+                batch_data = batch_data.to(device)
+                batch_predictions = model(batch_data) # (batch_size, num_turbines, out_seq_len, 1)
 
-                 # Extract actuals and masks from the Batch object
-                 # Shapes: (batch_size, out_seq_len, num_turbines, num_features_per_turbine)
-                 batch_output_all_features = batch_data.output.to(device)
-                 batch_output_mask_all_features = batch_data.output_mask.to(device)
+                # Extract actuals and masks from the Batch object
+                # Shapes: (batch_size, out_seq_len, num_turbines * num_features_per_turbine)
+                batch_output_all_features = batch_data.output.to(device)  # (batch_size, out_seq_len, N_turbines * N_features)
+                batch_output_mask_all_features = batch_data.output_mask.to(device)
 
-                 # Get target values and mask for TARGET_FEATURE only
-                 batch_actuals = batch_output_all_features[:, :, :, TARGET_FEATURE_INDEX].unsqueeze(-1) # (batch_size, out_seq_len, num_turbines, 1)
-                 batch_masks = batch_output_mask_all_features[:, :, :, TARGET_FEATURE_INDEX].unsqueeze(-1) # (batch_size, out_seq_len, num_turbines, 1)
+                num_turbines = batch_data.num_turbines
+                num_features_per_turbine = batch_output_all_features.shape[2] // num_turbines
 
-                 # Reorder actuals and masks to match prediction shape (batch, turb, out_seq, 1)
-                 batch_actuals = batch_actuals.permute(0, 2, 1, 3)
-                 batch_masks = batch_masks.permute(0, 2, 1, 3)
+                # Reshape to (batch_size, out_seq_len, num_turbines, num_features_per_turbine)
+                batch_output_reshaped = batch_output_all_features.view(
+                    batch_output_all_features.shape[0],
+                    batch_output_all_features.shape[1],
+                    num_turbines,
+                    num_features_per_turbine
+                )
+                batch_output_mask_reshaped = batch_output_mask_all_features.view(
+                    batch_output_mask_all_features.shape[0],
+                    batch_output_mask_all_features.shape[1],
+                    num_turbines,
+                    num_features_per_turbine
+                )
+
+                # Get target values and mask for TARGET_FEATURE only
+                batch_actuals = batch_output_reshaped[:, :, :, TARGET_FEATURE_INDEX].unsqueeze(-1) # (batch_size, out_seq_len, num_turbines, 1)
+                batch_masks = batch_output_mask_reshaped[:, :, :, TARGET_FEATURE_INDEX].unsqueeze(-1) # (batch_size, out_seq_len, num_turbines, 1)
+
+                # Reorder actuals and masks to match prediction shape (batch, turb, out_seq, 1)
+                batch_actuals = batch_actuals.permute(0, 2, 1, 3)
+                batch_masks = batch_masks.permute(0, 2, 1, 3)
             else:
                 raise ValueError(f"Unknown model type: {model_type}")
 
