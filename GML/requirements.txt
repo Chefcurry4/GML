@@ -21,3 +21,6 @@ plotly
 
 # For Tikhonov regularization (sparse matrices)
 scipy
+
+# For Graph visualisation
+networkx

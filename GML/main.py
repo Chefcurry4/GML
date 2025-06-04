@@ -1,5 +1,6 @@
 # wind_power_forecasting/main.py
 
+import datetime
 import torch
 import os
 import pandas as pd
@@ -15,6 +16,7 @@ import time # For overall timing
 from torch.utils.data import DataLoader, Subset # Import DataLoader and Subset
 from torch_geometric.data import Batch # Import Batch from torch_geometric.data
 import argparse # Add argparse
+from utils import visualize_spatial_graph
 
 
 # Set device
@@ -365,6 +367,16 @@ def run_experiment(
         print("Creating GNN DataLoaders with custom collate_fn...")
         # Build the spatial graph once (needed by the collate_fn)
         edge_index, edge_attr, locations = build_spatial_graph(location_df, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS)
+
+        # Visualize the spatial graph and store the image
+        timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        visualize_spatial_graph(
+            edge_index,
+            locations,
+            edge_attr=edge_attr,
+            save_path=f"GML/images/spatial_graph_gnn_{timestamp_str}.png",
+        )
+
         # Build temporal graph template for the window size (needed by collate_fn)
         temporal_graph_template = build_temporal_graph(INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE)
         # Build product graph template (for the window size) - used by GNN collate_fn

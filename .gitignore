@@ -4,6 +4,7 @@ data/
 GML/data/
 GML/data/*.csv
 GML/data/*.CSV
+images/
 
 # Python cache files
 __pycache__/

@@ -7,6 +7,8 @@ from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import Dataset, DataLoader, Subset
 import os
 from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, INPUT_FEATURES, TARGET_FEATURE, FEATURES_TO_NORMALIZE, MISSING_VALUE_PLACEHOLDER_GNN
+import networkx as nx
+import matplotlib.pyplot as plt
 
 def load_data(scada_path, location_path):
     """Loads SCADA and location data."""
@@ -203,3 +205,61 @@ def inverse_normalize_target(scaled_data, scaler_dict, original_turbine_ids, tar
             print(f"Warning: Scaler not found for feature '{target_feature_name}' turbine {turb_id}. Column not inverse normalized.")
 
     return unscaled_data 
+
+
+
+def visualize_spatial_graph(
+    edge_index: torch.Tensor,
+    locations: np.ndarray,
+    edge_attr: torch.Tensor = None,
+    save_path: str = "graph.png",
+    node_size: int = 30,
+    node_color: str = "blue",
+    edge_color: str = "gray",
+    edge_width: float = 0.5,
+    dpi: int = 500
+):
+    """
+    Visualize and save a 2D plot of the spatial graph.
+    Args:
+        edge_index: torch.Tensor of shape (2, num_edges)
+        locations: np.ndarray of shape (num_nodes, 2) with x,y coords
+        edge_attr: torch.Tensor of shape (num_edges, 1) or None
+        save_path: path to save the image
+        node_size: size of nodes
+        node_color: color of nodes
+        edge_color: color of edges
+        edge_width: width of edges
+        dpi: resolution of saved figure
+    """
+
+    # Build NetworkX graph
+    G = nx.Graph()
+    # Add nodes with position attribute
+    for i, (x, y) in enumerate(locations):
+        G.add_node(i, pos=(float(x), float(y)))
+
+    # Convert edge_index to numpy
+    ei = edge_index.cpu().numpy() if isinstance(edge_index, torch.Tensor) else edge_index
+    # Convert edge_attr to flat numpy array if provided
+    if edge_attr is not None:
+        ea = edge_attr.cpu().numpy().flatten() if isinstance(edge_attr, torch.Tensor) else edge_attr.flatten()
+        for (u, v), w in zip(zip(ei[0], ei[1]), ea):
+            G.add_edge(int(u), int(v), weight=float(w))
+    else:
+        for u, v in zip(ei[0], ei[1]):
+            G.add_edge(int(u), int(v))
+
+    # Extract positions
+    pos = nx.get_node_attributes(G, 'pos')
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(8, 8))
+    nx.draw_networkx_nodes(G, pos, node_size=node_size, node_color=node_color, ax=ax)
+    nx.draw_networkx_edges(G, pos, edge_color=edge_color, width=edge_width, ax=ax)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=dpi)
+    plt.close()
+    print(f"Spatial graph saved to {save_path}")
