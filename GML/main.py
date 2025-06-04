@@ -189,7 +189,7 @@ def run_experiment(
     if data_subset_turbines is not None:
         # Get the first N turbine IDs
         all_turbine_ids = sorted(location_df_orig['TurbID'].unique())
-        selected_turbines = all_turbine_ids[:data_subset_turbines]
+        selected_turbines = [tid for tid in all_turbine_ids if tid in data_subset_turbines]
         
         # Ensure location_df only contains specified turbines, sorted
         location_df = location_df_orig[location_df_orig['TurbID'].isin(selected_turbines)].sort_values('TurbID').reset_index(drop=True).copy()

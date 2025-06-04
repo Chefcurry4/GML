@@ -32,6 +32,7 @@ def build_spatial_graph(location_df, graph_type='radius', radius=None, k=None):
         rows, cols = np.where(D <= radius)
 
     elif graph_type == 'knn':
+        # * Note that kNN calculates the k nearest neighbors per node. In an undirected graph, this means that nodes might have more than k neighbors. However, each node has at least k neighbors.
         if k is None:
             raise ValueError("k required for kNN graph")
         nbrs = NearestNeighbors(n_neighbors=k+1).fit(locations)
