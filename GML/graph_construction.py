@@ -8,45 +8,60 @@ from scipy.spatial.distance import cdist
 import numpy as np
 import pandas as pd
 from config import SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
+from torch_geometric.utils import to_undirected, coalesce, remove_self_loops
 
 def build_spatial_graph(location_df, graph_type='radius', radius=None, k=None):
-    """Builds a spatial graph from turbine locations.
-    Args:
-        location_df (pd.DataFrame): DataFrame with turbine locations, must have 'x', 'y' columns
-        graph_type (str): 'radius' or 'knn'
-        radius (float): Radius for radius-based graph
-        k (int): Number of neighbors for kNN graph
-    Returns:
-        Tuple[torch.Tensor, torch.Tensor]: Edge index and edge attributes
     """
-    # Extract locations as numpy array
-    locations = location_df[['x', 'y']].values # Shape (num_turbines, 2)
-    
-    # Calculate pairwise distances
-    distances = cdist(locations, locations)
-    
+    Builds a spatial, undirected, self‐loop‐free graph:
+      • radius: connect all pairs with dist ≤ radius
+      • knn:    connect each node to its k nearest neighbors
+    Returns:
+      edge_index: LongTensor[2, E]
+      edge_attr:  FloatTensor[E, 1] (distance)
+      locations:  np.ndarray[N,2]
+    """
+    # 1) load coords & distances
+    locations = location_df[['x','y']].values
+    N = len(locations)
+    D = cdist(locations, locations).astype(np.float32)
+
+    # 2) build raw row/col lists
     if graph_type == 'radius':
         if radius is None:
-            raise ValueError("Must provide radius for radius-based graph")
-        # Create edges for all pairs within radius
-        edges = np.where(distances <= radius)
-        edge_index = torch.tensor(np.vstack(edges), dtype=torch.long)
-        edge_attr = torch.tensor(distances[edges], dtype=torch.float).unsqueeze(1)
-        
+            raise ValueError("radius required for radius graph")
+        rows, cols = np.where(D <= radius)
+
     elif graph_type == 'knn':
         if k is None:
-            raise ValueError("Must provide k for kNN graph")
-        # For each node, find k nearest neighbors
-        knn = np.argpartition(distances, k+1, axis=1)[:, :k+1]
-        # Create edge list (include both directions)
-        rows = np.repeat(np.arange(len(knn)), k+1)
-        cols = knn.flatten()
-        edge_index = torch.tensor(np.vstack((rows, cols)), dtype=torch.long)
-        edge_attr = torch.tensor(distances[rows, cols], dtype=torch.float).unsqueeze(1)
-        
+            raise ValueError("k required for kNN graph")
+        nbrs = NearestNeighbors(n_neighbors=k+1).fit(locations)
+        _, idx = nbrs.kneighbors(locations)
+        # drop self and flatten
+        rows = np.repeat(np.arange(N), k)
+        cols = idx[:, 1:k+1].reshape(-1)
+
     else:
-        raise ValueError(f"Unknown graph type: {graph_type}")
-    
+        raise ValueError(f"Unknown graph_type: {graph_type}")
+
+    # 3) remove self‐loops
+    mask = rows != cols
+    rows, cols = rows[mask], cols[mask]
+
+    # 4) enforce undirected & unique edges
+    unique = set()
+    for u, v in zip(rows, cols):
+        a, b = (u, v) if u < v else (v, u)
+        unique.add((a, b))
+    rows, cols = zip(*unique) if unique else ([], [])
+
+    # 5) assemble numpy arrays
+    edge_index_np = np.vstack((rows, cols))
+    edge_attr_np  = D[rows, cols][:, None]
+
+    # 6) convert to torch
+    edge_index = torch.from_numpy(edge_index_np).long()
+    edge_attr  = torch.from_numpy(edge_attr_np).float()
+
     return edge_index, edge_attr, locations
 
 
