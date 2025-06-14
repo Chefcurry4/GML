@@ -135,7 +135,7 @@ def sliding_window(data: np.ndarray, input_len: int, output_len: int):
     return X, Y
 
 
-def load_and_preprocess(csv_path, input_len=12, output_len=1, train_val_ratio=0.8, data_subset=1, shuffle_train_val_dataset = True, random_state=42):
+def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_ratio=0.8, data_subset=1, data_subset_turbines=-1, shuffle_train_val_dataset = True, random_state=42):
     """
     Preprocess SDWPF data using sliding window and split into training/validation sets.
     Args:
@@ -161,14 +161,29 @@ def load_and_preprocess(csv_path, input_len=12, output_len=1, train_val_ratio=0.
     if data_subset < 1.0:
         print("Subsetting data to", data_subset * 100, "%")
         num_rows = int(len(df) * data_subset)
-        df = df.iloc[:num_rows].reset_index(drop=True)
+        # Increase the num_rows to ensure, that a measurement at the same Day and Tmstamp is not cut off
+        cur_day = df.iloc[num_rows - 1]['Day']
+        cur_tmstamp = df.iloc[num_rows - 1]['Tmstamp']
+        while num_rows < len(df) and (df.iloc[num_rows]['Day'] == cur_day and df.iloc[num_rows]['Tmstamp'] == cur_tmstamp):
+            num_rows += 1
+
+        df_subset = df.iloc[:num_rows].reset_index(drop=True)
+    else:
+        df_subset = df
+
+
+    # Do subsetting for turbines by dropping all turbines with TurbID greater than data_subset_turbines
+    if data_subset_turbines > 0:
+        print(f"Subsetting data to first {data_subset_turbines} turbines")
+        df_subset = df_subset[df_subset['TurbID'] <= data_subset_turbines].reset_index(drop=True)
+    
     print("Loaded data shape:", df.shape)
 
     # Preprocess the data
-    preprocess_data(df)
+    preprocess_data(df_subset)
 
     # Pivot the data for easier computation with sliding window
-    data = pivot_sdwpf_multi(df) # shape: (timesteps, turbines, features)
+    data = pivot_sdwpf_multi(df_subset) # shape: (timesteps, turbines, features)
     print("Pivoted data shape:", data.shape)
 
     # Check if some values in data are NaN
@@ -198,13 +213,15 @@ def load_and_preprocess(csv_path, input_len=12, output_len=1, train_val_ratio=0.
 if __name__ == "__main__":
     # Only consider 20% of the data
     data_subset = 0.2
+    data_subset_turbines = -1  # Use all turbines
 
-    X_train, Y_train, X_val, Y_val = load_and_preprocess(
+    X_train, Y_train, X_val, Y_val = load_and_preprocess_data(
         csv_path=SCADA_DATA_PATH,
         input_len=INPUT_SEQUENCE_LENGTH,
         output_len=OUTPUT_SEQUENCE_LENGTH,
         train_val_ratio=TRAIN_VAL_SPLIT_RATIO,
         data_subset=data_subset,
+        data_subset_turbines=data_subset_turbines,
         shuffle_train_val_dataset=SHUFFLE_TRAIN_VAL_DATASET
     )
     print("X_train shape:", X_train.shape)
