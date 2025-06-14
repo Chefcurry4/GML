@@ -196,6 +196,18 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
 
     print(f"Sliding window created: X shape {X.shape}, Y shape {Y.shape}")
 
+    # Flatten X to match the dimensions for training the models
+    num_samples, sliding_window_size, num_turbines, features_per_turbine = X.shape
+    X = X.reshape(num_samples, sliding_window_size * num_turbines, features_per_turbine)
+    if output_len > 1:
+        # Also flatten Y if output_len > 1
+        Y = Y.reshape(num_samples, output_len * num_turbines)
+    print(f"Flattened X shape: {X.shape}")
+    print(f"Flattened Y shape: {Y.shape}")
+
+    # * Dimensions of X: (num_samples, sliding_window_size * num_turbines, features_per_turbine)
+    # * Dimensions of Y: (num_samples, num_turbines) if output_len == 1, else (num_samples, output_len, num_turbines)
+
     # Train/val split
     X_train, X_val, Y_train, Y_val = train_test_split(
         X, Y, train_size=train_val_ratio, random_state=random_state, shuffle=shuffle_train_val_dataset
