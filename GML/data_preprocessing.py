@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
+from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 
 # Do not use TurbID, Day and Tmstamp as features, since they are not physical quantities and do not provide useful information for the model.
 feature_names = [
@@ -150,6 +150,7 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
         Y_train (np.ndarray): Training output data.
         X_val (np.ndarray): Validation input data.
         Y_val (np.ndarray): Validation output data.
+        locations_df (pd.DataFrame): DataFrame with turbine locations.
     """
     print("\n==========================================================")
     print("Starting data preprocessing...")
@@ -204,10 +205,16 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
     print(f"Training set size: {X_train.shape}, {Y_train.shape}")
     print(f"Validation set size: {X_val.shape}, {Y_val.shape}")
 
+    # Also load the locations DataFrame for turbine locations
+    locations_df = pd.read_csv(LOCATION_DATA_PATH)
+    # Check if subsetting turbines is applied, if so, filter the locations DataFrame
+    if data_subset_turbines > 0:
+        locations_df = locations_df[locations_df['TurbID'] <= data_subset_turbines].reset_index(drop=True)
+
     print("Preprocessing complete")
     print("==========================================================\n")
 
-    return X_train, Y_train, X_val, Y_val
+    return X_train, Y_train, X_val, Y_val, locations_df
 
 # Example usage:
 if __name__ == "__main__":
@@ -215,7 +222,7 @@ if __name__ == "__main__":
     data_subset = 0.2
     data_subset_turbines = -1  # Use all turbines
 
-    X_train, Y_train, X_val, Y_val = load_and_preprocess_data(
+    X_train, Y_train, X_val, Y_val, locations_df = load_and_preprocess_data(
         csv_path=SCADA_DATA_PATH,
         input_len=INPUT_SEQUENCE_LENGTH,
         output_len=OUTPUT_SEQUENCE_LENGTH,
