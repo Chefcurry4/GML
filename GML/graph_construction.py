@@ -7,10 +7,14 @@ from sklearn.neighbors import NearestNeighbors
 from scipy.spatial.distance import cdist
 import numpy as np
 import pandas as pd
-from config import SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
+from args_interface import Args
+from utils import visualize_spatial_graph, visualize_spatio_temporal_graph, visualize_temporal_graph
+from config import INPUT_SEQUENCE_LENGTH, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
 from torch_geometric.utils import to_undirected, coalesce, remove_self_loops
+import datetime
+import os
 
-def build_spatial_graph(location_df, graph_type='radius', radius=None, k=None):
+def build_spatial_graph(location_df, args):
     """
     Builds a spatial, undirected, self‐loop‐free graph:
       • radius: connect all pairs with dist ≤ radius
@@ -20,6 +24,11 @@ def build_spatial_graph(location_df, graph_type='radius', radius=None, k=None):
       edge_attr:  FloatTensor[E, 1] (distance)
       locations:  np.ndarray[N,2]
     """
+    # 0) load data from config
+    radius = SPATIAL_RADIUS
+    k = K_NEIGHBORS
+    graph_type = args.spatial_graph_type
+
     # 1) load coords & distances
     locations = location_df[['x','y']].values
     N = len(locations)
@@ -195,6 +204,64 @@ def build_spatio_temporal_product(
     return st_edge_index, st_edge_attr
 
 
+def build_graph(locations_df, args: Args):
+    print("\n=========================================================")
+    print("Building spatio-temporal graphs")
+
+    # Make sure directory to save images exists
+    timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    images_path = f"GML/images/{timestamp_str}"
+    os.makedirs(images_path, exist_ok=True)
+
+    # Build the spatial graph
+    edge_index_spatial, edge_attr_spatial, locations = build_spatial_graph(locations_df, args)
+
+    # Visualize the spatial graph and store the image
+    visualize_spatial_graph(
+        edge_index_spatial,
+        locations,
+        edge_attr=edge_attr_spatial,
+        save_path=f"{images_path}/spatial_graph_gnn.png",
+    )
+
+    # Build temporal graph template for the window size (needed by collate_fn)
+    temp_edge_index = build_temporal_graph(INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE)
+
+    # Visualize the temporal graph
+    visualize_temporal_graph(
+        temp_edge_index,
+        num_time_steps=INPUT_SEQUENCE_LENGTH,
+        save_path=f"{images_path}/temporal_graph_gnn.png"
+    )
+
+    # Get the number of turbines
+    num_turbines = locations_df.shape[0]
+
+    # Build the spatio-temporal product graph 
+    spatio_temporal_edge_index, spatio_temporal_edge_attr = build_spatio_temporal_product(
+        spatial_edge_index=edge_index_spatial,
+        spatial_edge_attr=edge_attr_spatial,
+        N=num_turbines,
+        temporal_edge_index=temp_edge_index,
+        T=INPUT_SEQUENCE_LENGTH
+    )
+    # Visualize the spatio-temporal product graph
+    visualize_spatio_temporal_graph(
+        st_edge_index=spatio_temporal_edge_index,
+        locations=locations,
+        N=num_turbines,
+        T=INPUT_SEQUENCE_LENGTH,
+        time_offset=4*1800,            # horizontal separation between layers
+        save_path=f"{images_path}/spatio_temporal_product_graph_gnn.png",
+        node_size=5
+    )
+
+    if spatio_temporal_edge_index.numel() == 0 and num_turbines > 0 and INPUT_SEQUENCE_LENGTH > 0:
+        raise RuntimeError("Warning: Product graph template is empty, but data exists. Check graph construction parameters.")
+    
+    print("==========================================================\n")
+
+    return spatio_temporal_edge_index, spatio_temporal_edge_attr
 
 
 # TODO: remove old function

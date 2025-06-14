@@ -6,7 +6,8 @@ import pandas as pd
 import numpy as np  
 from sklearn.preprocessing import StandardScaler  
 from torch_sparse import coalesce 
-import os  
+import os
+from config import INPUT_SEQUENCE_LENGTH  
 
 # ----------- Graph Convolution Layer --------------
 class GraphConvolution(nn.Module):  
@@ -61,6 +62,8 @@ class ImportanceSampler:
 
 def build_dense_adj(edge_index, num_nodes): 
     edge_index, _ = coalesce(edge_index, torch.ones(edge_index.shape[1]), num_nodes, num_nodes)  # Coalesce edges (Ensures the edge index is sorted and unique.)
+    print("Try to allocate dense adjacency matrix with shape:", num_nodes)
+    print(num_nodes)
     adj = torch.zeros((num_nodes, num_nodes))  
     adj[edge_index[0], edge_index[1]] = 1.0  
     adj = (adj + adj.T) / 2  
@@ -129,6 +132,62 @@ def train_fastgcn(scada_csv, edge_index, hidden=64, samples=512, dropout=0.3):
 
     print("\u2705 FASTGCN TRAINING is complete!")  
 
+def train_fastgcn_from_arrays(
+    X_train, Y_train, X_val, Y_val, edge_index,
+    hidden=64, samples=512, dropout=0.3, epochs=20, lr=0.01
+):
+    """
+    Train FastGCN using preprocessed arrays/tensors.
+    Each sample is a separate spatio-temporal product graph.
+    Args:
+        X_train: (num_samples, num_nodes, num_features)
+        Y_train: (num_samples, num_turbines)
+        X_val: (num_val_samples, num_nodes, num_features)
+        Y_val: (num_val_samples, num_turbines)
+        edge_index: torch.LongTensor, shape [2, num_edges] (for a single product graph)
+    """
+    # Check if cuda is available and set device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    num_nodes = X_train.shape[1]        # Number of nodes in the product graph (turbines * time steps)
+    num_features = X_train.shape[2]     # Number of features per node
+    num_turbines = Y_train.shape[1]     # Number of turbines in one time step (for prediction)
+    print(f"Number of nodes: {num_nodes}, Number of features: {num_features}, Number of turbines: {num_turbines}")
+
+    # Build adjacency for the product graph (shared for all samples)
+    adj = build_dense_adj(edge_index, num_nodes).to(device)
+    print(f"Adjacency matrix shape: {adj.shape}")
+
+    sampler = ImportanceSampler(samples)  
+    model = FastGCN(nfeat=num_features, nhid=hidden, dropout=dropout, sampler=sampler).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+
+    print("Start training FastGCN ...")
+
+    # TODO: use sampler
+    for epoch in range(epochs):
+        model.train()
+        total_loss = 0
+        for i in range(X_train.shape[0]):
+            x = torch.tensor(X_train[i], dtype=torch.float32, device=device)  # (num_nodes, features)
+            y = torch.tensor(Y_train[i], dtype=torch.float32, device=device)  # (num_turbines,)
+            optimizer.zero_grad()
+            out = model(x, [adj, adj])  # Pass the full adjacency matrices for both layers
+            num_nodes = INPUT_SEQUENCE_LENGTH * num_turbines
+            last_step_start = (INPUT_SEQUENCE_LENGTH - 1) * num_turbines
+            # TODO: the problem is that the fastGCN model outputs a single value for each turbine in the product graph. The product graph contains 12 timesteps, but we only want to forecast one timestep
+            out_last = out[last_step_start:]  # shape: (num_turbines, ...)
+            loss = F.mse_loss(out_last.squeeze(), y.squeeze())
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        avg_loss = total_loss / X_train.shape[0]
+
+        print(f"Epoch {epoch+1:02d} | Train MSE: {avg_loss:.4f}")
+
+    print("\u2705 FASTGCN TRAINING is complete!")
+    return model
 
 # ======= Example =======
 if __name__ == "__main__":  
