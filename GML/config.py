@@ -26,6 +26,11 @@ SPATIAL_GRAPH_TYPE = 'radius'  # 'radius' or 'knn'
 SPATIAL_RADIUS = 1500  # Radius for radius-based graph
 K_NEIGHBORS = 5  # Number of neighbors for kNN graph
 TEMPORAL_GRAPH_TYPE = 'sequential'  # Only sequential supported for now
+DOMDIR_WIND_DIR = 0
+DOMDIR_INCLUDE_WEIGHTS = False
+DOMDIR_DECAY_LENGTH = 1000.0  # For calculation of edge weights
+DOMDIR_ANGLE_THRESHOLD = 20.0 # For edge creation based on wind direction similarity
+DOMDIR_MAX_DISTANCE = 1500.0  # Maximum distance for edge creation based on wind direction similarity
 
 # Missing Data Handling
 # Simple baselines: applied BEFORE training/dataset creation

@@ -10,7 +10,7 @@ import pandas as pd
 from static_graphs import build_wake_graph
 from args_interface import GRAPH_TYPE, Args
 from utils import visualize_spatial_graph, visualize_spatio_temporal_graph, visualize_temporal_graph
-from config import INPUT_SEQUENCE_LENGTH, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
+from config import DOMDIR_ANGLE_THRESHOLD, DOMDIR_DECAY_LENGTH, DOMDIR_INCLUDE_WEIGHTS, DOMDIR_MAX_DISTANCE, DOMDIR_WIND_DIR, INPUT_SEQUENCE_LENGTH, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
 from torch_geometric.utils import to_undirected, coalesce, remove_self_loops
 import datetime
 import os
@@ -50,12 +50,7 @@ def build_spatial_graph(location_df, args):
         rows = np.repeat(np.arange(N), k)
         cols = idx[:, 1:k+1].reshape(-1)
     elif graph_type == GRAPH_TYPE.DOMDIR:
-        wind_dir = 0
-        include_weights = False
-        decay_length = 1000.0
-        angle_threshold = 20.0
-        max_distance = 1500.0
-        data = build_wake_graph(locations, wind_dir, include_weights, decay_length, angle_threshold, max_distance)
+        data = build_wake_graph(locations, DOMDIR_WIND_DIR, DOMDIR_INCLUDE_WEIGHTS, DOMDIR_DECAY_LENGTH, DOMDIR_ANGLE_THRESHOLD, DOMDIR_MAX_DISTANCE)
 
         return data.edge_index, locations
 
