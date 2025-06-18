@@ -105,7 +105,7 @@ def build_cluster_adj(edge_index, cluster_nodes):
 def train_clustergcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
     hidden=64, dropout=0.1, epochs=20,
-    patience=10, batch_size=32, device="cuda" if torch.cuda.is_available() else "cpu"
+    patience=10, batch_size=32, lr=0.01, device="cuda" if torch.cuda.is_available() else "cpu"
 ):
     X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
     # Original Y_train: [B, num_turbines]
@@ -134,8 +134,8 @@ def train_clustergcn_from_arrays(
     print(f"Batch size: {batch_size}")
     print(f"Parameters: {sum(p.numel() for p in model.parameters())}")
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=patience)
     loss_fn = nn.MSELoss()
 
     best_val_loss = float('inf')

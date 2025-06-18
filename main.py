@@ -3,9 +3,9 @@ from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LE
 from models.fastGCN import train_fastgcn_from_arrays
 from models.GCN import train_gcn_from_arrays
 from models.clusterGCN import train_clustergcn_from_arrays
-from new_data_preprocessing import load_and_preprocess_data
-from graph_construction import build_graph
-from args_interface import parse_args
+from utils.new_data_preprocessing import load_and_preprocess_data
+from utils.graph_construction import build_graph
+from utils.args_interface import parse_args
 import os
 
 def main():
@@ -38,19 +38,35 @@ def main():
             Y_train=Y_train,
             X_val=X_val,
             Y_val=Y_val,
-            edge_index=edge_index
+            edge_index=edge_index,
+            hidden=args.hidden_dimensions,
+            dropout=args.dropout_rate,
+            epochs=args.epochs,
+            lr=args.learning_rate,
+            patience=args.patience,
+            batch_size=args.batch_size
         )
 
     elif args.model_type == 'cluster-gcn':
         model = train_clustergcn_from_arrays(
             X_train, Y_train, X_val, Y_val, edge_index,
-            hidden=64, dropout=0.1, epochs=20
+            hidden=args.hidden_dimensions,
+            dropout=args.dropout_rate,
+            epochs=args.epochs,
+            patience=args.patience,
+            batch_size=args.batch_size,
+            lr=args.learning_rate
         )
 
     elif args.model_type == 'gcn':
         model = train_gcn_from_arrays(
             X_train, Y_train, X_val, Y_val, edge_index,
-            hidden=128, dropout=0.15, epochs=20
+            hidden=args.hidden_dimensions,
+            dropout=args.dropout_rate,
+            epochs=args.epochs,
+            patience=args.patience,
+            batch_size=args.batch_size,
+            lr=args.learning_rate
         )
 
     else:

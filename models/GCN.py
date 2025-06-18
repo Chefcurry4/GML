@@ -69,7 +69,7 @@ def normalize_adj(edge_index, num_nodes):
 def train_gcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
     hidden=32, dropout=0.3, epochs=20,
-    patience=10, batch_size=32, device="cuda" if torch.cuda.is_available() else "cpu"
+    patience=10, batch_size=32, lr=0.01, device="cuda" if torch.cuda.is_available() else "cpu"
 ):
     X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
     Y_train = torch.tensor(Y_train, dtype=torch.float32).to(device)
@@ -89,7 +89,7 @@ def train_gcn_from_arrays(
     print(f"Output nodes: {N_out}")
     print(f"Parameters: {sum(p.numel() for p in model.parameters())}")
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
     loss_fn = nn.MSELoss()
 

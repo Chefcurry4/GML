@@ -119,7 +119,7 @@ class FastGCN(nn.Module):
 # ----------- FastGCN Training Function --------------
 def train_fastgcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
-    hidden=256, samples=512, dropout=0.2, epochs=40, lr=0.0001
+    hidden=256, samples=512, dropout=0.2, epochs=40, lr=0.0001, patience=3, batch_size=128
 ):
     print("CUDA Available:", torch.cuda.is_available())
     print("CUDA Device Name:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "No CUDA device")
@@ -137,10 +137,10 @@ def train_fastgcn_from_arrays(
     print(f"- Number of training samples: {len(X_train)}")
     print(f"- Number of validation samples: {len(X_val)}")
 
-    model = FastGCN(nfeat=num_features, nhid=hidden, dropout=dropout, edge_index=edge_index, n_nodes=num_nodes).to(device)
+    model = FastGCN(nfeat=num_features, nhid=hidden, dropout=dropout, edge_index=edge_index, n_nodes=num_nodes, batch_size=batch_size).to(device)
     model.num_turbines = num_turbines
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=patience)
     print("\nStarting training...")
     best_val_loss = float('inf')
     patience_counter = 0
