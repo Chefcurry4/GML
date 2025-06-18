@@ -4,8 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F  
 import pandas as pd  
 import numpy as np  
-from sklearn.preprocessing import StandardScaler  
-from torch_sparse import coalesce 
+from sklearn.preprocessing import StandardScaler
 import os
 import time
 from torch_geometric.utils import degree
