@@ -7,7 +7,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import Subset
 # Removed config import, pass necessary params
 from models.product_graph_gnn import TARGET_FEATURE_INDEX # Need target feature index
-from utils import inverse_normalize_target
+from utils.utils import inverse_normalize_target
 import os
 from config import PREDICTIONS_DIR, TARGET_FEATURE, INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH
 

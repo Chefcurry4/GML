@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.sparse import lil_matrix, identity
 from scipy.sparse.linalg import spsolve
 import torch
-from graph_construction import build_spatial_graph, build_temporal_graph, build_product_graph
+from utils.graph_construction import build_spatial_graph, build_temporal_graph, build_product_graph
 from config import SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE, INPUT_FEATURES, TARGET_FEATURE, TIKHONOV_LAMBDA, MISSING_VALUE_PLACEHOLDER_GNN
 import time
 

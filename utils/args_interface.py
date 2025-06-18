@@ -1,6 +1,6 @@
 from typing import List, Optional
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 
 # Constants and enums
 class GRAPH_TYPE(Enum):
@@ -15,6 +15,12 @@ class Args:
     force_retrain: Optional[bool] = False
     data_subset_turbines: Optional[int] = -1
     data_subset: Optional[float] = 1
+    epochs: int = 40
+    dropout_rate: float = 0.35
+    hidden_dimensions: int = 128
+    batch_size: int = 32
+    patience: float = 10
+    learning_rate: float = 0.001
 
 def parse_args() -> Args:
     import argparse
@@ -35,6 +41,14 @@ def parse_args() -> Args:
     # Force retrain flag
     parser.add_argument('--force-retrain', action='store_true', default=False, help='Force retrain the model even if a checkpoint exists')
 
+    # Options for training the model
+    parser.add_argument('--epochs', type=int, default=40, help='Number of epochs to train the model (default: 40)')
+    parser.add_argument('--dropout-rate', type=float, default=0.35, help='Dropout rate for the model (default: 0.35)')
+    parser.add_argument('--hidden-dimensions', type=int, default=128, help='Number of hidden dimensions in the model (default: 128)')
+    parser.add_argument('--batch-size', type=int, default=32, help='Batch size for training (default: 32)')
+    parser.add_argument('--patience', type=int, default=10, help='Patience for the cluster GCN (default: 10)')
+    parser.add_argument('--learning-rate', type=float, default=0.001, help='Learning rate for the optimizer (default: 0.001)')
+
     parsed = parser.parse_args()
 
     # Set graph type correctly
@@ -47,11 +61,23 @@ def parse_args() -> Args:
     print(f"  Force retrain: {parsed.force_retrain}")
     print(f"  Data subset turbines: {parsed.data_subset_turbines}")
     print(f"  Data subset percentage: {parsed.data_subset}")
+    print(f"  Epochs: {parsed.epochs}")
+    print(f"  Dropout rate: {parsed.dropout_rate}")
+    print(f"  Hidden dimensions: {parsed.hidden_dimensions}")
+    print(f"  Batch size: {parsed.batch_size}")
+    print(f"  Patience: {parsed.patience}")
+    print(f"  Learning rate: {parsed.learning_rate}")
 
     return Args(
         spatial_graph_type=parsed.spatial_graph_type,
         model_type=parsed.model_type,
         force_retrain=parsed.force_retrain,
         data_subset_turbines=parsed.data_subset_turbines,
-        data_subset=parsed.data_subset
+        data_subset=parsed.data_subset,
+        epochs=parsed.epochs,
+        dropout_rate=parsed.dropout_rate,
+        hidden_dimensions=parsed.hidden_dimensions,
+        batch_size=parsed.batch_size,
+        patience=parsed.patience,
+        learning_rate=parsed.learning_rate
     )
