@@ -1,0 +1,3 @@
+# Schedule
+knn fast-gcn --data-subset 0.2
+radiu gcn --data-subset 0.2
