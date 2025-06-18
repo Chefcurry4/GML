@@ -406,4 +406,4 @@ def visualize_spatio_temporal_graph(
     plt.tight_layout()
     plt.savefig(save_path, dpi=dpi)
     plt.close()
-    print(f"Spatio‐temporal graph saved to {save_path}")
+    print(f"Spatio temporal graph saved to {save_path}")
