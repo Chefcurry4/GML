@@ -1,100 +1,154 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pandas as pd
 import numpy as np
-import os
-from sklearn.preprocessing import StandardScaler
-from scipy.sparse import coo_matrix
+import time
 
 # ----------- Graph Convolution Layer --------------
 class GraphConvolution(nn.Module):
-    def __init__(self, in_features, out_features):
+    def __init__(self, in_features, out_features, bias=True):
         super().__init__()
         self.weight = nn.Parameter(torch.empty(in_features, out_features))
+        self.bias = nn.Parameter(torch.empty(out_features)) if bias else None
+        self.reset_parameters()
+
+    def reset_parameters(self):
         nn.init.xavier_uniform_(self.weight)
+        if self.bias is not None:
+            nn.init.zeros_(self.bias)
 
     def forward(self, x, adj):
-        return torch.matmul(adj, torch.matmul(x, self.weight))
+        support = torch.matmul(x, self.weight)
+        out = torch.matmul(adj, support)
+        if self.bias is not None:
+            out += self.bias
+        return out
 
-# ----------- Standard GCN --------------
+# ----------- Standard GCN Model --------------
 class GCN(nn.Module):
-    def __init__(self, nfeat, nhid, dropout):
+    def __init__(self, nfeat, nhid, nout, dropout):
         super().__init__()
         self.gc1 = GraphConvolution(nfeat, nhid)
-        self.gc2 = GraphConvolution(nhid, 1)
+        self.gc2 = GraphConvolution(nhid, nhid)
+        self.gc3 = GraphConvolution(nhid, nout)
+        self.bn1 = nn.BatchNorm1d(nhid)
+        self.bn2 = nn.BatchNorm1d(nhid)
         self.dropout = dropout
 
     def forward(self, x, adj):
-        x = F.relu(self.gc1(x, adj))
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = self.gc2(x, adj)
-        return x.squeeze()
+        B, N, Fin = x.shape
+        h = self.gc1(x, adj)
+        h = h.view(B * N, -1)
+        h = self.bn1(h)
+        h = h.view(B, N, -1)
+        h = F.relu(h)
+        h = F.dropout(h, self.dropout, training=self.training)
 
-# ----------- Load and process SCADA data --------------
-def load_sdwpf_data(scada_csv):
-     
-    df = pd.read_csv(scada_csv)  
+        h = self.gc2(h, adj)
+        h = h.view(B * N, -1)
+        h = self.bn2(h)
+        h = h.view(B, N, -1)
+        h = F.relu(h)
+        h = F.dropout(h, self.dropout, training=self.training)
 
-    df = df.sort_values(['TurbID', 'Tmstamp']) 
+        out = self.gc3(h, adj)
+        return out
 
-    df['time_idx'] = df.groupby('TurbID').cumcount()  # Assign time index per turbine
-    
-    max_time = df['time_idx'].max() 
-
-    df['node_idx'] = df['TurbID'] * (max_time + 1) + df['time_idx']  # Unique node index for each turbine-time pair
-
-    feature_cols = ['Wspd', 'Wdir', 'Etmp', 'Itmp', 'Ndir', 'Pab1', 'Pab2', 'Pab3']  # Features
-    target_col = 'Patv'  # Target 
-
-    df = df.dropna(subset=feature_cols + [target_col])  # Drop rows with missing values (NOT SURE)
-    scaler = StandardScaler()  
-    # X = Feature matrix: describes each node (turbine-time pair)
-    X = scaler.fit_transform(df[feature_cols])  # Normalize features
-    # y = Target vector: Patv for each turbine-time pair
-    y = df[target_col].values  # Extract target values
-    # node_idx = Unique index for each turbine-time pair
-    # This will be used to map features and targets back to the original node indices
-    node_idx = df['node_idx'].values  # Extract node indices
-
-    num_nodes = node_idx.max() + 1  # Total number of nodes
-    X_tensor = torch.zeros((num_nodes, len(feature_cols)))  
-    y_tensor = torch.zeros(num_nodes)  
-    X_tensor[node_idx] = torch.tensor(X, dtype=torch.float32)  # Assign features to tensor
-    y_tensor[node_idx] = torch.tensor(y, dtype=torch.float32)  # Assign targets to tensor
-
-    return X_tensor, y_tensor, num_nodes 
-
-# ----------- Build dense adjacency matrix from edge_index --------------
-def build_dense_adj(edge_index, num_nodes):
-    adj = torch.zeros((num_nodes, num_nodes))
+# ----------- Normalize Adjacency Matrix --------------
+def normalize_adj(edge_index, num_nodes):
+    adj = torch.zeros((num_nodes, num_nodes), dtype=torch.float32)
     adj[edge_index[0], edge_index[1]] = 1.0
-    adj = (adj + adj.T) / 2
-    adj = adj / (adj.sum(1, keepdim=True) + 1e-6) # Row-normalize adjacency
-    return adj
+    adj = (adj + adj.T) / 2  # Make symmetric
+    deg = adj.sum(1)
+    deg_inv_sqrt = torch.pow(deg + 1e-6, -0.5)
+    deg_inv_sqrt[torch.isinf(deg_inv_sqrt)] = 0.
+    D_inv_sqrt = torch.diag(deg_inv_sqrt)
+    return D_inv_sqrt @ adj @ D_inv_sqrt
 
-# ----------- Train the GCN model --------------
-def train_gcn(scada_csv, edge_index, hidden=64, dropout=0.3, epochs=20):
-    print("\U0001F4CA Loading SCADA data...")
-    X, y, num_nodes = load_sdwpf_data(scada_csv)
-    print("\U0001F517 Building adjacency matrix...")
-    adj = build_dense_adj(edge_index, num_nodes)
-    print("\U0001F680 Initializing GCN...")
-    model = GCN(nfeat=X.shape[1], nhid=hidden, dropout=dropout)
+# ----------- Train Standard GCN --------------
+def train_gcn_from_arrays(
+    X_train, Y_train, X_val, Y_val, edge_index,
+    hidden=32, dropout=0.3, epochs=20,
+    patience=10, batch_size=32, device="cuda" if torch.cuda.is_available() else "cpu"
+):
+    X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
+    Y_train = torch.tensor(Y_train, dtype=torch.float32).to(device)
+    X_val = torch.tensor(X_val, dtype=torch.float32).to(device)
+    Y_val = torch.tensor(Y_val, dtype=torch.float32).to(device)
+
+    B, N, Fin = X_train.shape
+    N_out = Y_train.shape[1]
+    adj = normalize_adj(edge_index, N).to(device)
+    model = GCN(nfeat=Fin, nhid=hidden, nout=1, dropout=dropout).to(device)  # Predict 1 value per node
+
+    print("\n[Standard GCN Architecture]")
+    print(f"Input features: {Fin}")
+    print(f"Hidden dimension: {hidden}")
+    print(f"Dropout rate: {dropout}")
+    print(f"Batch size: {batch_size}")
+    print(f"Output nodes: {N_out}")
+    print(f"Parameters: {sum(p.numel() for p in model.parameters())}")
+
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    print("\U0001F3CB\uFE0F Training...")
-    model.train()
-    for epoch in range(epochs):
-        output = model(X, adj)
-        loss = F.mse_loss(output, y)
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        print(f"Epoch {epoch+1:02d} | MSE Loss: {loss.item():.4f}")
-    print("\u2705 GCN training complete!")
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
+    loss_fn = nn.MSELoss()
 
-# ======= Example Usage =======
-if __name__ == "__main__":
-    edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]], dtype=torch.long)  # Example edge index
-    scada_path = os.path.join("data", "wind_power_sdwpf.csv")
-    train_gcn(scada_path, edge_index)
+    best_val_loss = float('inf')
+    patience_counter = 0
+    train_losses, val_losses = [], []
+
+    for epoch in range(epochs):
+        t_start = time.time()
+        model.train()
+        total_loss = 0
+        num_batches = 0
+
+        for i in range(0, B, batch_size):
+            x_batch = X_train[i:i+batch_size]  # shape (B, N, F)
+            y_batch = Y_train[i:i+batch_size]  # shape (B, N)
+            adj_batch = adj.unsqueeze(0).expand(x_batch.shape[0], -1, -1)
+
+            out = model(x_batch, adj_batch).squeeze(-1)  # shape (B, N)
+            loss = loss_fn(out, y_batch)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            num_batches += 1
+
+        avg_train_loss = total_loss / num_batches
+        train_losses.append(avg_train_loss)
+
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for i in range(0, X_val.shape[0], batch_size):
+                x = X_val[i:i+batch_size]
+                y = Y_val[i:i+batch_size]
+                adj_val = adj.unsqueeze(0).expand(x.shape[0], -1, -1)
+
+                out = model(x, adj_val).squeeze(-1)  # shape (B, N)
+                val_loss += loss_fn(out, y).item()
+
+        avg_val_loss = val_loss / (X_val.shape[0] // batch_size)
+        val_losses.append(avg_val_loss)
+        scheduler.step(avg_val_loss)
+
+        epoch_time = time.time() - t_start
+        print(f"Epoch {epoch+1}/{epochs} | Time: {epoch_time:.2f}s")
+        print(f"Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}")
+        print(f"Train RMSE: {np.sqrt(avg_train_loss):.4f} | Val RMSE: {np.sqrt(avg_val_loss):.4f}")
+
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"\n⏹ Early stopping triggered after {epoch+1} epochs!")
+                break
+
+    print("✅ Standard GCN training complete.")
+    return model, train_losses, val_losses

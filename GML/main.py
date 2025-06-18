@@ -1,6 +1,8 @@
 import pandas as pd
 from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 from models.fastGCN import train_fastgcn_from_arrays
+from models.GCN import train_gcn_from_arrays
+from models.clusterGCN import train_clustergcn_from_arrays
 from new_data_preprocessing import load_and_preprocess_data
 from graph_construction import build_graph
 from args_interface import parse_args
@@ -30,13 +32,29 @@ def main():
 
     # ===========================================================
     # Step 3: Choose the model and train it
-    model = train_fastgcn_from_arrays(
-        X_train=X_train,
-        Y_train=Y_train,
-        X_val=X_val,
-        Y_val=Y_val,
-        edge_index=edge_index
-    )  
+    if args.model_type == 'fast-gcn':
+        model = train_fastgcn_from_arrays(
+            X_train=X_train,
+            Y_train=Y_train,
+            X_val=X_val,
+            Y_val=Y_val,
+            edge_index=edge_index
+        )
+
+    elif args.model_type == 'cluster-gcn':
+        model = train_clustergcn_from_arrays(
+            X_train, Y_train, X_val, Y_val, edge_index,
+            hidden=64, dropout=0.1, epochs=20
+        )
+
+    elif args.model_type == 'gcn':
+        model = train_gcn_from_arrays(
+            X_train, Y_train, X_val, Y_val, edge_index,
+            hidden=128, dropout=0.15, epochs=20
+        )
+
+    else:
+        raise ValueError(f"Unsupported model type: {args.model_type}")
     # ===========================================================
 
     # Step 4: Evaluate the model
