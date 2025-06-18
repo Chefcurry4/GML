@@ -1,7 +1,7 @@
 import pandas as pd
 from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 from models.fastGCN import train_fastgcn_from_arrays
-from data_preprocessing import load_and_preprocess_data
+from new_data_preprocessing import load_and_preprocess_data
 from graph_construction import build_graph
 from args_interface import parse_args
 import os
