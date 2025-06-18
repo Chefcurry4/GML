@@ -25,7 +25,7 @@ def main():
 
     # ===========================================================
     # Step 1: Build Spatio-Temporal Graph
-    edge_index, edge_attr = build_graph(locations_df, args)
+    edge_index = build_graph(locations_df, args)
     # ===========================================================
 
     # ===========================================================

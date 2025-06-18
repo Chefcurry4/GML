@@ -211,7 +211,6 @@ def inverse_normalize_target(scaled_data, scaler_dict, original_turbine_ids, tar
 def visualize_spatial_graph(
     edge_index: torch.Tensor,
     locations: np.ndarray,
-    edge_attr: torch.Tensor = None,
     save_path: str = "graph.png",
     node_size: int = 30,
     node_color: str = "blue",
@@ -224,7 +223,6 @@ def visualize_spatial_graph(
     Args:
         edge_index: torch.Tensor of shape (2, num_edges)
         locations: np.ndarray of shape (num_nodes, 2) with x,y coords
-        edge_attr: torch.Tensor of shape (num_edges, 1) or None
         save_path: path to save the image
         node_size: size of nodes
         node_color: color of nodes
@@ -241,14 +239,8 @@ def visualize_spatial_graph(
 
     # Convert edge_index to numpy
     ei = edge_index.cpu().numpy() if isinstance(edge_index, torch.Tensor) else edge_index
-    # Convert edge_attr to flat numpy array if provided
-    if edge_attr is not None:
-        ea = edge_attr.cpu().numpy().flatten() if isinstance(edge_attr, torch.Tensor) else edge_attr.flatten()
-        for (u, v), w in zip(zip(ei[0], ei[1]), ea):
-            G.add_edge(int(u), int(v), weight=float(w))
-    else:
-        for u, v in zip(ei[0], ei[1]):
-            G.add_edge(int(u), int(v))
+    for u, v in zip(ei[0], ei[1]):
+        G.add_edge(int(u), int(v))
 
     # Extract positions
     pos = nx.get_node_attributes(G, 'pos')
