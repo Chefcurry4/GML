@@ -122,6 +122,9 @@ def train_fastgcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
     hidden=256, samples=512, dropout=0.2, epochs=40, lr=0.0001
 ):
+    print("CUDA Available:", torch.cuda.is_available())
+    print("CUDA Device Name:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "No CUDA device")
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     edge_index = edge_index.to(device)
