@@ -59,14 +59,14 @@ GML/
 Before you can start using the model, you need to download the dataset. This can be done using the script `download_data.py` script.
 
 ```bash
-python GML/download_data.py
+python download_data.py
 ```
 
 ### Basic Training
 
 Train a model using:
 ```bash
-python GML/main.py [MODEL_TYPE] [INTERPOLATION_METHOD] [OPTIONS]
+python main.py [MODEL_TYPE] [INTERPOLATION_METHOD] [OPTIONS]
 ```
 
 Arguments:
@@ -81,20 +81,20 @@ Options:
 Examples:
 ```bash
 # Train GNN model with joint interpolation
-python GML/main.py GNN joint
+python main.py GNN joint
 
 # Train both models with mean interpolation using subset of data
-python GML/main.py BOTH mean --data-subset-time-days 30 --data-subset-turbines 5
+python main.py BOTH mean --data-subset-time-days 30 --data-subset-turbines 5
 
 # Force retrain GRU model
-python GML/main.py GRU mean --force-retrain
+python main.py GRU mean --force-retrain
 ```
 
 ### Cleanup Old Models
 
 To remove old model checkpoints and keep only the latest: (this might still not work perfectly)
 ```bash
-python GML/cleanup.py 
+python cleanup.py 
 ```
 
 ## ⚙️ Configuration

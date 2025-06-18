@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from data_preprocessing import load_sdwpf_data  # Provides preprocessing and loading of SDWPF data fileciteturn4file0
+from new_data_preprocessing import load_sdwpf_data  # Provides preprocessing and loading of SDWPF data fileciteturn4file0
 # --- USER CONFIGURATION ---
 # paths to your data
 WIND_CSV        = "GML/data/wind_power_sdwpf.csv"         # CSV of wind directions; index=timestamp, columns=turbine IDs
