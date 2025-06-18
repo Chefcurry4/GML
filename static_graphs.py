@@ -178,7 +178,7 @@ def plot_wake_graphs(graphs: dict,
 # --- Main Script ---
 if __name__ == '__main__':
     # --- First example from graph_construction.py ---
-    df_loc = pd.read_csv('GML/data/turbine_location.csv')
+    df_loc = pd.read_csv('data/turbine_location.csv')
     print("Example turbine locations:")
     print(df_loc.head())
 

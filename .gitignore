@@ -1,9 +1,9 @@
 # Data files
 data/
 *.csv
-GML/data/
-GML/data/*.csv
-GML/data/*.CSV
+data/
+data/*.csv
+data/*.CSV
 images/
 
 # Python cache files
@@ -27,7 +27,6 @@ ENV/
 
 # Model checkpoints and outputs
 output/
-GML/trained_models/
 trained_models/
 checkpoints/
 *.pt
