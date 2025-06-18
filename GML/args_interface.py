@@ -1,5 +1,12 @@
 from typing import List, Optional
 from dataclasses import dataclass
+from enum import Enum, auto
+
+# Constants and enums
+class GRAPH_TYPE(Enum):
+    KNN = "knn"
+    RADIUS = "radius"
+    DOMDIR = "domdir"
 
 @dataclass
 class Args:
@@ -14,7 +21,7 @@ def parse_args() -> Args:
     parser = argparse.ArgumentParser()
 
     # Spatial graph type
-    parser.add_argument('spatial_graph_type', type=str, choices=['radius', 'knn'], help='Spatial graph type: radius or knn')
+    parser.add_argument('spatial_graph_type', type=str, choices=[g.value for g in GRAPH_TYPE], help='Spatial graph type')
 
     # Model type
     parser.add_argument('model_type', type=str, choices=['gcn', 'fast-gcn', 'cluster-gcn'], help='Model type: gcn, fast-gcn, cluster-gcn')
@@ -30,9 +37,12 @@ def parse_args() -> Args:
 
     parsed = parser.parse_args()
 
+    # Set graph type correctly
+    parsed.spatial_graph_type = GRAPH_TYPE(parsed.spatial_graph_type)
+
     # Print a summary of the arguments
     print("Settings:")
-    print(f"  Spatial graph type: {parsed.spatial_graph_type}")
+    print(f"  Spatial graph type: {parsed.spatial_graph_type.value}")
     print(f"  Model type: {parsed.model_type}")
     print(f"  Force retrain: {parsed.force_retrain}")
     print(f"  Data subset turbines: {parsed.data_subset_turbines}")

@@ -7,7 +7,8 @@ from sklearn.neighbors import NearestNeighbors
 from scipy.spatial.distance import cdist
 import numpy as np
 import pandas as pd
-from args_interface import Args
+from static_graphs import build_wake_graph
+from args_interface import GRAPH_TYPE, Args
 from utils import visualize_spatial_graph, visualize_spatio_temporal_graph, visualize_temporal_graph
 from config import INPUT_SEQUENCE_LENGTH, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
 from torch_geometric.utils import to_undirected, coalesce, remove_self_loops
@@ -21,12 +22,9 @@ def build_spatial_graph(location_df, args):
       • knn:    connect each node to its k nearest neighbors
     Returns:
       edge_index: LongTensor[2, E]
-      edge_attr:  FloatTensor[E, 1] (distance)
       locations:  np.ndarray[N,2]
     """
     # 0) load data from config
-    radius = SPATIAL_RADIUS
-    k = K_NEIGHBORS
     graph_type = args.spatial_graph_type
 
     # 1) load coords & distances
@@ -35,13 +33,15 @@ def build_spatial_graph(location_df, args):
     D = cdist(locations, locations).astype(np.float32)
 
     # 2) build raw row/col lists
-    if graph_type == 'radius':
+    if graph_type == GRAPH_TYPE.RADIUS:
+        radius = SPATIAL_RADIUS
         if radius is None:
             raise ValueError("radius required for radius graph")
         rows, cols = np.where(D <= radius)
 
-    elif graph_type == 'knn':
+    elif graph_type == GRAPH_TYPE.KNN:
         # * Note that kNN calculates the k nearest neighbors per node. In an undirected graph, this means that nodes might have more than k neighbors. However, each node has at least k neighbors.
+        k = K_NEIGHBORS
         if k is None:
             raise ValueError("k required for kNN graph")
         nbrs = NearestNeighbors(n_neighbors=k+1).fit(locations)
@@ -49,6 +49,15 @@ def build_spatial_graph(location_df, args):
         # drop self and flatten
         rows = np.repeat(np.arange(N), k)
         cols = idx[:, 1:k+1].reshape(-1)
+    elif graph_type == GRAPH_TYPE.DOMDIR:
+        wind_dir = 0
+        include_weights = False
+        decay_length = 1000.0
+        angle_threshold = 20.0
+        max_distance = 1500.0
+        data = build_wake_graph(locations, wind_dir, include_weights, decay_length, angle_threshold, max_distance)
+
+        return data.edge_index, locations
 
     else:
         raise ValueError(f"Unknown graph_type: {graph_type}")
@@ -66,13 +75,11 @@ def build_spatial_graph(location_df, args):
 
     # 5) assemble numpy arrays
     edge_index_np = np.vstack((rows, cols))
-    edge_attr_np  = D[rows, cols][:, None]
 
     # 6) convert to torch
     edge_index = torch.from_numpy(edge_index_np).long()
-    edge_attr  = torch.from_numpy(edge_attr_np).float()
 
-    return edge_index, edge_attr, locations
+    return edge_index, locations
 
 
 def build_temporal_graph(window_size, graph_type='sequential'):
@@ -95,14 +102,13 @@ def build_temporal_graph(window_size, graph_type='sequential'):
 
 def build_spatio_temporal_product(
     spatial_edge_index: torch.LongTensor,   # [2, E_s]
-    spatial_edge_attr: torch.FloatTensor,   # [E_s, 1]
     N: int,                                 # number of spatial nodes
     temporal_edge_index: torch.LongTensor,  # [2, E_t], indices in [0..T-1]
     T: int                                  # window size (number of time layers)
 ):
     """
     Builds the Cartesian (spatio-temporal) product of:
-      • a spatial, undirected graph on N nodes (edge_index + edge_attr),
+      • a spatial, undirected graph on N nodes (edge_index),
       • a temporal (directed) chain on T time steps (0→1→…→T-1).
     
     Output graph has N*T nodes, indexed as (t * N + i).  Edges:
@@ -113,20 +119,15 @@ def build_spatio_temporal_product(
     Args:
         spatial_edge_index: LongTensor of shape [2, E_s], containing one undirected
                             edge per pair (u < v).  (No self-loops, no duplicates.)
-        spatial_edge_attr:  FloatTensor of shape [E_s, 1], e.g. distances for each
-                            spatial edge.
         N:                  Number of spatial nodes. 
         temporal_edge_index: LongTensor of shape [2, E_t], where each edge is (t->t+1).
         T:                  Number of time layers (window size).
 
     Returns:
         st_edge_index: LongTensor of shape [2, E_total] for the product graph.
-        st_edge_attr:  FloatTensor of shape [E_total, 1], where the first
-                       (E_s * T) rows correspond to spatial distances, and
-                       the last (N * E_t) rows are all 1.0 (temporal weights).
     """
 
-    # 1) Prepare lists to accumulate edges and attributes
+    # 1) Prepare lists to accumulate edges
     spatial_rows, spatial_cols = spatial_edge_index  # both are length E_s
     E_s = spatial_rows.size(0)
     E_t = temporal_edge_index.size(1)
@@ -154,10 +155,6 @@ def build_spatio_temporal_product(
     #   spatial_v_flat = (spatial_v + time_offsets).view(-1)
     spatial_u_flat = (spatial_u + time_offsets).reshape(-1)  # length = T*E_s
     spatial_v_flat = (spatial_v + time_offsets).reshape(-1)  # length = T*E_s
-
-    # 1d) The corresponding attributes also repeat T times
-    spatial_attr_flat = spatial_edge_attr.unsqueeze(0).repeat(T, 1, 1) # [T, E_s, 1]
-    spatial_attr_flat = spatial_attr_flat.reshape(-1, 1) # [T*E_s, 1]
 
     # --- (B) Build all temporal edges for each spatial node i ---
     # Each temporal edge is (t -> t+1).  We want, for all i in [0..N-1],
@@ -188,9 +185,6 @@ def build_spatio_temporal_product(
     temporal_u_flat = (all_i + t_src_rep * N).reshape(-1)  # [N * E_t]
     temporal_v_flat = (all_i + t_dst_rep * N).reshape(-1)  # [N * E_t]
 
-    #  B.3: Assign a unit weight (=1.0) to every temporal edge
-    temporal_attr_flat = torch.ones((N * E_t, 1), dtype=torch.float32)
-
     # --- (C) Concatenate spatial and temporal pieces ---
     # First stack row‐indices, then col‐indices, along dim=0.
     st_u = torch.cat([spatial_u_flat, temporal_u_flat], dim=0)  # [T*E_s + N*E_t]
@@ -198,10 +192,7 @@ def build_spatio_temporal_product(
 
     st_edge_index = torch.stack([st_u, st_v], dim=0)  # [2, E_total]
 
-    # All weights (first T*E_s are spatial_attr_flat, next N*E_t are temporal_attr_flat)
-    st_edge_attr = torch.cat([spatial_attr_flat, temporal_attr_flat], dim=0)  # [E_total, 1]
-
-    return st_edge_index, st_edge_attr
+    return st_edge_index
 
 
 def build_graph(locations_df, args: Args):
@@ -214,13 +205,12 @@ def build_graph(locations_df, args: Args):
     os.makedirs(images_path, exist_ok=True)
 
     # Build the spatial graph
-    edge_index_spatial, edge_attr_spatial, locations = build_spatial_graph(locations_df, args)
+    edge_index_spatial, locations = build_spatial_graph(locations_df, args)
 
     # Visualize the spatial graph and store the image
     visualize_spatial_graph(
         edge_index_spatial,
         locations,
-        edge_attr=edge_attr_spatial,
         save_path=f"{images_path}/spatial_graph_gnn.png",
     )
 
@@ -238,9 +228,8 @@ def build_graph(locations_df, args: Args):
     num_turbines = locations_df.shape[0]
 
     # Build the spatio-temporal product graph 
-    spatio_temporal_edge_index, spatio_temporal_edge_attr = build_spatio_temporal_product(
+    spatio_temporal_edge_index = build_spatio_temporal_product(
         spatial_edge_index=edge_index_spatial,
-        spatial_edge_attr=edge_attr_spatial,
         N=num_turbines,
         temporal_edge_index=temp_edge_index,
         T=INPUT_SEQUENCE_LENGTH
@@ -261,7 +250,7 @@ def build_graph(locations_df, args: Args):
     
     print("==========================================================\n")
 
-    return spatio_temporal_edge_index, spatio_temporal_edge_attr
+    return spatio_temporal_edge_index
 
 
 # TODO: remove old function
