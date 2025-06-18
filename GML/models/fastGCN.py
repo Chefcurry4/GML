@@ -7,193 +7,198 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler  
 from torch_sparse import coalesce 
 import os
-from config import INPUT_SEQUENCE_LENGTH  
+import time
+from torch_geometric.utils import degree
+from config import INPUT_SEQUENCE_LENGTH
 
-# ----------- Graph Convolution Layer --------------
+# ----------- Normalize Sparse Adjacency Matrix --------------
+def normalize_sparse_adj(edge_index, edge_weight=None, num_nodes=None):
+    if edge_weight is None:
+        edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
+    if num_nodes is None:
+        num_nodes = edge_index.max().item() + 1
+    row, col = edge_index
+    deg = torch.zeros(num_nodes, device=edge_index.device)
+    deg.scatter_add_(0, row, edge_weight)
+    deg.scatter_add_(0, col, edge_weight)
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    norm_weight = edge_weight * deg_inv_sqrt[row] * deg_inv_sqrt[col]
+    return edge_index, norm_weight
+
+# ----------- Graph Convolution Layer (SPARSE) --------------
 class GraphConvolution(nn.Module):  
-    def __init__(self, in_features, out_features): 
+    def __init__(self, in_features, out_features, bias=True): 
         super().__init__()  
-        self.weight = nn.Parameter(torch.empty(in_features, out_features)) 
-        nn.init.xavier_uniform_(self.weight)  
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = nn.Parameter(torch.empty(in_features, out_features))
+        self.bias = nn.Parameter(torch.empty(out_features)) if bias else None
+        self.reset_parameters()
 
-    def forward(self, x, adj):  
-        return torch.matmul(adj, torch.matmul(x, self.weight))  # Graph convolution operation
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.weight)
+        if self.bias is not None:
+            nn.init.zeros_(self.bias)
 
+    def forward(self, x, edge_index, edge_weight=None):
+        # Compute XW first (more efficient for sparse ops)
+        support = torch.matmul(x, self.weight)  # [N, out_features]
+        
+        # Use efficient scatter operations
+        if edge_weight is None:
+            edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
+        
+        # Aggregate using scatter_add_ (much more memory efficient)
+        out = torch.zeros_like(support)
+        row, col = edge_index
+        edge_weight = edge_weight.view(-1, 1)
+        out.scatter_add_(0, col.view(-1, 1).expand(-1, self.out_features), 
+                        support[row] * edge_weight)
+        
+        if self.bias is not None:
+            out = out + self.bias
+        return out
 
-# ----------- FastGCN Model (regression task to predict Patv) --------------
+# ----------- FastGCN Model --------------
 class FastGCN(nn.Module):  
-    def __init__(self, nfeat, nhid, dropout, sampler): 
-        super().__init__()  
-        self.gc1 = GraphConvolution(nfeat, nhid) 
-        self.gc2 = GraphConvolution(nhid, 1)  
-        self.dropout = dropout # prevent overfitting by setting to zero a fraction of the neurons' outputs in a layer on each forward pass.
-        self.sampler = sampler 
+    def __init__(self, nfeat, nhid=512, dropout=0.35, edge_index=None, n_nodes=None, batch_size=128): 
+        super().__init__()
+        self.gc1 = GraphConvolution(nfeat, nhid, bias=True)
+        self.gc2 = GraphConvolution(nhid, nhid, bias=True)
+        self.gc3 = GraphConvolution(nhid, 1, bias=True)
+        self.bn1 = nn.BatchNorm1d(nhid)
+        self.bn2 = nn.BatchNorm1d(nhid)
+        self.dropout = dropout
+        self.batch_size = batch_size
 
-    def forward(self, x, adjs): 
-        x = F.relu(self.gc1(x, adjs[0]))  # Apply first GCN layer and ReLU activation
-        x = F.dropout(x, self.dropout, training=self.training)  # Apply dropout
-        x = self.gc2(x, adjs[1])  # Apply second GCN layer
-        return x.squeeze()  # Remove single-dimensional entries from output
+        if n_nodes is not None:
+            self.num_turbines = 32  # Will be overridden later
+        if edge_index is not None and n_nodes is not None:
+            self.edge_index = edge_index
+            self.n_nodes = n_nodes
+            self.norm_edge_index = edge_index
+            self.norm_edge_weight = None
 
-    def sampling(self, features, adj):  # Wrapper for sampler's sampling method
-        return self.sampler.sampling(features, adj)
+        # L2 normalization weight
+        self.l2_lambda = 0.01
 
+        print(f"\n[FastGCN Architecture]")
+        print(f"Input features: {nfeat}")
+        print(f"Hidden dimension: {nhid}")
+        print(f"Dropout rate: {dropout}")
+        print(f"Batch size: {batch_size}")
+        print(f"Parameters: {sum(p.numel() for p in self.parameters())}")
 
-# ----------- Importance Sampler --------------
-class ImportanceSampler:  
-    def __init__(self, num_samples):  
-        self.num_samples = num_samples  
+    def l2_regularization(self):
+        """Compute L2 regularization loss"""
+        l2_loss = 0.0
+        for param in self.parameters():
+            l2_loss += torch.norm(param, p=2)
+        return self.l2_lambda * l2_loss
 
-    def sampling(self, features, adj):  # Perform importance sampling
-        num_nodes = features.shape[0]  
-        prob = adj.sum(dim=1).numpy()  # Compute node degrees as sampling probabilities
-        prob = prob / prob.sum()  # Normalize probabilities
-        sampled_idx = np.random.choice(num_nodes, self.num_samples, p=prob, replace=False)  # Sample node indices
-        sampled_idx = torch.tensor(sampled_idx, dtype=torch.long)  # Convert indices to tensor
+    def forward(self, x, edge_info=None):
+        batch_size = x.size(0)
+        outputs = []
+        edge_index, edge_weight = (self.norm_edge_index, self.norm_edge_weight) if edge_info is None else edge_info
+        for i in range(batch_size):
+            x_i = x[i]
+            h = self.gc1(x_i, edge_index, edge_weight)
+            h = self.bn1(h)
+            h = F.relu(h)
+            h = F.dropout(h, self.dropout, training=self.training)
+            h = self.gc2(h, edge_index, edge_weight)
+            h = self.bn2(h)
+            h = F.relu(h)
+            h = F.dropout(h, self.dropout, training=self.training)
+            out = self.gc3(h, edge_index, edge_weight)
+        
+            
+            outputs.append(out[:self.num_turbines, 0])
+        return torch.stack(outputs)
 
-        sampled_features = features[sampled_idx]  # Select sampled node features
-        sampled_adj = adj[sampled_idx][:, sampled_idx]  # Select sub-adjacency matrix for sampled nodes
-
-        return sampled_features, [sampled_adj, sampled_adj], sampled_idx  
-
-
-# ----------- Build dense adj from edge_index --------------
-# in FastGCN use a list of adjacency matrices—one for each layer—because Each layer samples a different subgraph from the full graph.
-
-def build_dense_adj(edge_index, num_nodes): 
-    edge_index, _ = coalesce(edge_index, torch.ones(edge_index.shape[1]), num_nodes, num_nodes)  # Coalesce edges (Ensures the edge index is sorted and unique.)
-    print("Try to allocate dense adjacency matrix with shape:", num_nodes)
-    print(num_nodes)
-    adj = torch.zeros((num_nodes, num_nodes))  
-    adj[edge_index[0], edge_index[1]] = 1.0  
-    adj = (adj + adj.T) / 2  
-    adj = adj / (adj.sum(1, keepdim=True) + 1e-6)  # Row-normalize adjacency
-    return adj  
-
-
-# ----------- Load and process SDWPF .csv into X, y --------------
-def load_sdwpf_data(scada_csv):  
-
-    df = pd.read_csv(scada_csv)  
-
-    df = df.sort_values(['TurbID', 'Tmstamp']) 
-
-    df['time_idx'] = df.groupby('TurbID').cumcount()  # Assign time index per turbine
-    
-    max_time = df['time_idx'].max() 
-
-    df['node_idx'] = df['TurbID'] * (max_time + 1) + df['time_idx']  # Unique node index for each turbine-time pair
-
-    feature_cols = ['Wspd', 'Wdir', 'Etmp', 'Itmp', 'Ndir', 'Pab1', 'Pab2', 'Pab3']  # Features
-    target_col = 'Patv'  # Target 
-
-    df = df.dropna(subset=feature_cols + [target_col])  # Drop rows with missing values (NOT SURE)
-    scaler = StandardScaler()  
-    # X = Feature matrix: describes each node (turbine-time pair)
-    X = scaler.fit_transform(df[feature_cols])  # Normalize features
-    # y = Target vector: Patv for each turbine-time pair
-    y = df[target_col].values  # Extract target values
-    # node_idx = Unique index for each turbine-time pair
-    # This will be used to map features and targets back to the original node indices
-    node_idx = df['node_idx'].values  # Extract node indices
-
-    num_nodes = node_idx.max() + 1  # Total number of nodes
-    X_tensor = torch.zeros((num_nodes, len(feature_cols)))  
-    y_tensor = torch.zeros(num_nodes)  
-    X_tensor[node_idx] = torch.tensor(X, dtype=torch.float32)  # Assign features to tensor
-    y_tensor[node_idx] = torch.tensor(y, dtype=torch.float32)  # Assign targets to tensor
-
-    return X_tensor, y_tensor, num_nodes 
-
-
-# ----------- Train the model --------------
-def train_fastgcn(scada_csv, edge_index, hidden=64, samples=512, dropout=0.3): 
-    print("\U0001F4CA Loading SCADA data...")  
-    X, y, num_nodes = load_sdwpf_data(scada_csv) 
-
-    print("\U0001F517 Building adjacency matrix...") 
-    adj = build_dense_adj(edge_index, num_nodes) 
-
-    print("\U0001F680 Initializing FastGCN...") 
-    sampler = ImportanceSampler(samples)  
-    model = FastGCN(nfeat=X.shape[1], nhid=hidden, dropout=dropout, sampler=sampler) 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01) 
-
-    print("\U0001F3CB\uFE0F Training...")  
-    model.train()  
-    for epoch in range(1, 21):  
-        sampled_X, sampled_adjs, idx = model.sampling(X, adj)  
-        output = model(sampled_X, sampled_adjs) 
-        loss = F.mse_loss(output, y[idx])  
-        loss.backward() 
-        optimizer.step()  
-        optimizer.zero_grad()  
-        print(f"Epoch {epoch:02d} | MSE Loss: {loss.item():.4f}")  
-
-    print("\u2705 FASTGCN TRAINING is complete!")  
-
+# ----------- FastGCN Training Function --------------
 def train_fastgcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
-    hidden=64, samples=512, dropout=0.3, epochs=20, lr=0.01
+    hidden=256, samples=512, dropout=0.2, epochs=40, lr=0.0001
 ):
-    """
-    Train FastGCN using preprocessed arrays/tensors.
-    Each sample is a separate spatio-temporal product graph.
-    Args:
-        X_train: (num_samples, num_nodes, num_features)
-        Y_train: (num_samples, num_turbines)
-        X_val: (num_val_samples, num_nodes, num_features)
-        Y_val: (num_val_samples, num_turbines)
-        edge_index: torch.LongTensor, shape [2, num_edges] (for a single product graph)
-    """
-    # Check if cuda is available and set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    edge_index = edge_index.to(device)
+    num_nodes = X_train.shape[1]
+    num_features = X_train.shape[2]
+    num_turbines = Y_train.shape[1]
+    print(f"\nDataset stats:")
+    print(f"- Number of nodes per graph: {num_nodes}")
+    print(f"- Number of features per node: {num_features}")
+    print(f"- Number of turbines (output dim): {num_turbines}")
+    print(f"- Number of training samples: {len(X_train)}")
+    print(f"- Number of validation samples: {len(X_val)}")
 
-    num_nodes = X_train.shape[1]        # Number of nodes in the product graph (turbines * time steps)
-    num_features = X_train.shape[2]     # Number of features per node
-    num_turbines = Y_train.shape[1]     # Number of turbines in one time step (for prediction)
-    print(f"Number of nodes: {num_nodes}, Number of features: {num_features}, Number of turbines: {num_turbines}")
+    model = FastGCN(nfeat=num_features, nhid=hidden, dropout=dropout, edge_index=edge_index, n_nodes=num_nodes).to(device)
+    model.num_turbines = num_turbines
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    print("\nStarting training...")
+    best_val_loss = float('inf')
+    patience_counter = 0
+    patience = 10
+    train_losses = []
+    val_losses = []
 
-    # Build adjacency for the product graph (shared for all samples)
-    adj = build_dense_adj(edge_index, num_nodes).to(device)
-    print(f"Adjacency matrix shape: {adj.shape}")
-
-    sampler = ImportanceSampler(samples)  
-    model = FastGCN(nfeat=num_features, nhid=hidden, dropout=dropout, sampler=sampler).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    print(f"Model parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
-
-    print("Start training FastGCN ...")
-
-    # TODO: use sampler
     for epoch in range(epochs):
+        t_start = time.time()
         model.train()
         total_loss = 0
-        for i in range(X_train.shape[0]):
-            x = torch.tensor(X_train[i], dtype=torch.float32, device=device)  # (num_nodes, features)
-            y = torch.tensor(Y_train[i], dtype=torch.float32, device=device)  # (num_turbines,)
+        num_batches = 0
+        for i in range(0, len(X_train), model.batch_size):
+            batch_end = min(i + model.batch_size, len(X_train))
+            x = torch.tensor(X_train[i:batch_end], dtype=torch.float32, device=device)
+            y = torch.tensor(Y_train[i:batch_end], dtype=torch.float32, device=device)
             optimizer.zero_grad()
-            out = model(x, [adj, adj])  # Pass the full adjacency matrices for both layers
-            num_nodes = INPUT_SEQUENCE_LENGTH * num_turbines
-            last_step_start = (INPUT_SEQUENCE_LENGTH - 1) * num_turbines
-            # TODO: the problem is that the fastGCN model outputs a single value for each turbine in the product graph. The product graph contains 12 timesteps, but we only want to forecast one timestep
-            out_last = out[last_step_start:]  # shape: (num_turbines, ...)
-            loss = F.mse_loss(out_last.squeeze(), y.squeeze())
+            out = model(x, (edge_index, None))
+            loss = F.mse_loss(out, y)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
             total_loss += loss.item()
-        avg_loss = total_loss / X_train.shape[0]
+            num_batches += 1
+        avg_train_loss = total_loss / num_batches
+        train_losses.append(avg_train_loss)
 
-        print(f"Epoch {epoch+1:02d} | Train MSE: {avg_loss:.4f}")
+        model.eval()
+        val_loss = 0
+        num_val_batches = 0
+        with torch.no_grad():
+            for i in range(0, len(X_val), model.batch_size):
+                batch_end = min(i + model.batch_size, len(X_val))
+                x = torch.tensor(X_val[i:batch_end], dtype=torch.float32, device=device)
+                y = torch.tensor(Y_val[i:batch_end], dtype=torch.float32, device=device)
+                out = model(x, (edge_index, None))
+                val_loss += F.mse_loss(out, y).item()
+                num_val_batches += 1
+        avg_val_loss = val_loss / num_val_batches
+        val_losses.append(avg_val_loss)
+        scheduler.step(avg_val_loss)
+        epoch_time = time.time() - t_start
+        print(f"Epoch {epoch+1}/{epochs} | Time: {epoch_time:.2f}s")
+        print(f"Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}")
+        print(f"Train RMSE: {np.sqrt(avg_train_loss):.4f}| Val RMSE: {np.sqrt(avg_val_loss):.4f}")
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"\nEarly stopping triggered after {epoch+1} epochs!")
+                break
 
-    print("\u2705 FASTGCN TRAINING is complete!")
-    return model
+    print("\nTraining completed!")
+    print(f"Best validation loss: {best_val_loss:.6f}")
+    return model, train_losses, val_losses
 
-# ======= Example =======
+# ======= Example Entry Point =======
 if __name__ == "__main__":  
-   
-    edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]], dtype=torch.long)  # change here
-
-  
+    edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]], dtype=torch.long)
     scada_path = os.path.join("data", "wind_power_sdwpf.csv") 
-    train_fastgcn(scada_path, edge_index)  
+    train_fastgcn_from_arrays(scada_path, edge_index)
