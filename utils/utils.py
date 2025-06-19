@@ -9,6 +9,8 @@ import os
 from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, INPUT_FEATURES, TARGET_FEATURE, FEATURES_TO_NORMALIZE, MISSING_VALUE_PLACEHOLDER_GNN
 import networkx as nx
 import matplotlib.pyplot as plt
+import csv
+from datetime import datetime
 
 def load_data(scada_path, location_path):
     """Loads SCADA and location data."""
@@ -407,3 +409,82 @@ def visualize_spatio_temporal_graph(
     plt.savefig(save_path, dpi=dpi)
     plt.close()
     print(f"Spatio temporal graph saved to {save_path}")
+
+def log_train_results(args, num_epochs, total_time, best_val_loss, log_file_name="results.csv"):
+    """
+    Log training results to a CSV file. Creates the file if it doesn't exist.
+    Appends a new row with all training parameters and results.
+    
+    Args:
+        args: Arguments object containing all training settings
+        num_epochs: int, number of epochs trained
+        total_time: float, total training time in seconds
+        best_val_loss: float, best validation loss achieved
+        log_file_path: str, path to the CSV log file
+    """
+    output_dir = "output"
+    # Ensure the output directory exists
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    log_file_path = os.path.join(output_dir, log_file_name)
+
+    # Define the header columns
+    fieldnames = [
+        'timestamp',
+        'spatial_graph_type',
+        'model_type',
+        'force_retrain',
+        'data_subset_turbines',
+        'data_subset',
+        'epochs_requested',
+        'epochs_trained',
+        'dropout_rate',
+        'hidden_dimensions',
+        'batch_size',
+        'patience',
+        'learning_rate',
+        'knn_neighbors',
+        'spatial_radius',
+        'total_time_seconds',
+        'best_val_loss'
+    ]
+    
+    # Prepare the row data
+    row_data = {
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'spatial_graph_type': getattr(args, 'spatial_graph_type', 'N/A'),
+        'model_type': getattr(args, 'model_type', 'N/A'),
+        'force_retrain': getattr(args, 'force_retrain', False),
+        'data_subset_turbines': getattr(args, 'data_subset_turbines', -1),
+        'data_subset': getattr(args, 'data_subset', 1.0),
+        'epochs_requested': getattr(args, 'epochs', 'N/A'),
+        'epochs_trained': num_epochs,
+        'dropout_rate': getattr(args, 'dropout_rate', 'N/A'),
+        'hidden_dimensions': getattr(args, 'hidden_dimensions', 'N/A'),
+        'batch_size': getattr(args, 'batch_size', 'N/A'),
+        'patience': getattr(args, 'patience', 'N/A'),
+        'learning_rate': getattr(args, 'learning_rate', 'N/A'),
+        'knn_neighbors': getattr(args, 'knn_neighbors', 'N/A'),
+        'spatial_radius': getattr(args, 'spatial_radius', 'N/A'),
+        'total_time_seconds': round(total_time, 2),
+        'best_val_loss': round(best_val_loss, 6)
+    }
+    
+    # Check if file exists to determine if we need to write headers
+    file_exists = os.path.isfile(log_file_path)
+    
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(log_file_path) if os.path.dirname(log_file_path) else '.', exist_ok=True)
+    
+    # Write to CSV file
+    with open(log_file_path, 'a', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        # Write header if file is new
+        if not file_exists:
+            writer.writeheader()
+        
+        # Write the data row
+        writer.writerow(row_data)
+    
+    print(f"Training results logged to {log_file_path}")

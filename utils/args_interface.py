@@ -21,6 +21,8 @@ class Args:
     batch_size: int = 32
     patience: float = 10
     learning_rate: float = 0.001
+    knn_neighbors: int = 5
+    spatial_radius: int = 1500
 
 def parse_args() -> Args:
     import argparse
@@ -49,6 +51,12 @@ def parse_args() -> Args:
     parser.add_argument('--patience', type=int, default=10, help='Patience for the cluster GCN (default: 10)')
     parser.add_argument('--learning-rate', type=float, default=0.001, help='Learning rate for the optimizer (default: 0.001)')
 
+    # knn neighbors
+    parser.add_argument('--knn-neighbors', type=int, default=5, help='Number of neighbors for KNN graph; when knn is selected (default: 5)')
+
+    # spatial radius
+    parser.add_argument('--spatial-radius', type=int, default=1500, help='Radius for spatial graph; when radius is selected (default: 1500)')
+
     parsed = parser.parse_args()
 
     # Set graph type correctly
@@ -67,6 +75,8 @@ def parse_args() -> Args:
     print(f"  Batch size: {parsed.batch_size}")
     print(f"  Patience: {parsed.patience}")
     print(f"  Learning rate: {parsed.learning_rate}")
+    print(f"  KNN neighbors: {parsed.knn_neighbors}")
+    print(f"  Spatial radius: {parsed.spatial_radius}")
 
     return Args(
         spatial_graph_type=parsed.spatial_graph_type,
@@ -79,5 +89,7 @@ def parse_args() -> Args:
         hidden_dimensions=parsed.hidden_dimensions,
         batch_size=parsed.batch_size,
         patience=parsed.patience,
-        learning_rate=parsed.learning_rate
+        learning_rate=parsed.learning_rate,
+        knn_neighbors=parsed.knn_neighbors,
+        spatial_radius=parsed.spatial_radius
     )

@@ -9,6 +9,7 @@ import os
 import time
 from torch_geometric.utils import degree
 from config import INPUT_SEQUENCE_LENGTH
+from utils.utils import log_train_results
 
 # ----------- Normalize Sparse Adjacency Matrix --------------
 def normalize_sparse_adj(edge_index, edge_weight=None, num_nodes=None):
@@ -119,7 +120,7 @@ class FastGCN(nn.Module):
 # ----------- FastGCN Training Function --------------
 def train_fastgcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
-    hidden=256, samples=512, dropout=0.2, epochs=40, lr=0.0001, patience=3, batch_size=128
+    hidden=256, samples=512, dropout=0.2, epochs=40, lr=0.0001, patience=3, batch_size=128, args=None
 ):
     print("CUDA Available:", torch.cuda.is_available())
     print("CUDA Device Name:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "No CUDA device")
@@ -147,6 +148,9 @@ def train_fastgcn_from_arrays(
     patience = 10
     train_losses = []
     val_losses = []
+
+    actual_epochs_trained = 0
+    training_time_seconds = 0
 
     for epoch in range(epochs):
         t_start = time.time()
@@ -186,6 +190,10 @@ def train_fastgcn_from_arrays(
         print(f"Epoch {epoch+1}/{epochs} | Time: {epoch_time:.2f}s")
         print(f"Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}")
         print(f"Train RMSE: {np.sqrt(avg_train_loss):.4f}| Val RMSE: {np.sqrt(avg_val_loss):.4f}")
+
+        training_time_seconds += epoch_time
+        actual_epochs_trained += 1
+
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
@@ -197,6 +205,15 @@ def train_fastgcn_from_arrays(
 
     print("\nTraining completed!")
     print(f"Best validation loss: {best_val_loss:.6f}")
+
+    # Log training results
+    log_train_results(
+        args=args,
+        num_epochs=actual_epochs_trained,
+        total_time=training_time_seconds,
+        best_val_loss=best_val_loss,
+    )
+
     return model, train_losses, val_losses
 
 # ======= Example Entry Point =======
