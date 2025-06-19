@@ -2,6 +2,8 @@
 
 This project implements wind power forecasting using both Graph Neural Networks (GNN) and Gated Recurrent Units (GRU). It handles spatial-temporal data from multiple wind turbines, incorporating both temporal dependencies and spatial relationships between turbines.
 
+TODO: rework README!
+
 ## 📋 Table of Contents
 - [Installation](#installation)
 - [Project Structure](#project-structure)
@@ -59,43 +61,31 @@ GML/
 Before you can start using the model, you need to download the dataset. This can be done using the script `download_data.py` script.
 
 ```bash
-python GML/download_data.py
+python download_data.py
 ```
 
 ### Basic Training
 
 Train a model using:
 ```bash
-python GML/main.py [MODEL_TYPE] [INTERPOLATION_METHOD] [OPTIONS]
+python main.py [SPATIAL_GRAPH_TYPE] [MODEL_TYPE] [OPTIONS]
 ```
-
-Arguments:
-- `MODEL_TYPE`: Choose from ['GRU', 'GNN', 'BOTH']
-- `INTERPOLATION_METHOD`: Choose from ['remove', 'mean', 'median', 'ffill', 'bfill', 'linear', 'tikhonov', 'joint']
-
-Options:
-- `--force-retrain`: Force retraining even if saved models exist (NOTE THAT TRAINING A MODEL WITH THE WHOLE DATASET REQUIRES HOURS)
-- `--data-subset-time-days N`: Use only N days of data (this might still not work perfectly)
-- `--data-subset-turbines N`: Use only N turbines (this might still not work perfectly)
 
 Examples:
 ```bash
-# Train GNN model with joint interpolation
-python GML/main.py GNN joint
-
-# Train both models with mean interpolation using subset of data
-python GML/main.py BOTH mean --data-subset-time-days 30 --data-subset-turbines 5
-
-# Force retrain GRU model
-python GML/main.py GRU mean --force-retrain
+# Use epsilon-ball (radius) for spatial graph, train a GCN and only use 20% of the dataset
+python main.py radius gcn --data-subset 0.2
 ```
 
-### Cleanup Old Models
+## 🏃 Model Runner
 
-To remove old model checkpoints and keep only the latest: (this might still not work perfectly)
+If you want to run several models after each other, you can use the model runner.
+
 ```bash
-python GML/cleanup.py 
+python model-runner.py [SCHEDULE_FILE]
 ```
+
+This will run all the variations defined in the provided schedule file and store the output to `output/model_runs`.
 
 ## ⚙️ Configuration
 

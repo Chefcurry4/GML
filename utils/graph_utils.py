@@ -1,8 +1,8 @@
 import numpy as np
 import argparse
 from torch_geometric.data import Data
-from dominant_dir import get_dominant_for_window
-from static_graphs import build_wake_graphs
+from utils.dominant_dir import get_dominant_for_window
+from utils.static_graphs import build_wake_graphs
 
 
 def _circular_diff(a: float, b: float) -> float:
