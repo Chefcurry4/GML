@@ -20,10 +20,26 @@ class GraphConvolution(nn.Module):
     def forward(self, x, adj):
         """
         x: (batch_size, num_nodes, in_features)
-        adj: (num_nodes, num_nodes) normalized adjacency matrix
+        adj: sparse COO tensor (num_nodes, num_nodes) normalized adjacency matrix
         """
+        B, N, F = x.shape
+        
+        # Apply weight transformation
         support = torch.matmul(x, self.weight)  # (batch, nodes, out_features)
-        out = torch.matmul(adj, support)        # (batch, nodes, out_features)
+        
+        # Handle sparse matrix multiplication
+        if adj.is_sparse:
+            # For sparse adjacency, process each batch separately
+            out_list = []
+            for b in range(B):
+                # adj @ support[b] -> (N, out_features)
+                out_b = torch.sparse.mm(adj, support[b])
+                out_list.append(out_b)
+            out = torch.stack(out_list, dim=0)  # (B, N, out_features)
+        else:
+            # Dense matrix multiplication (fallback)
+            out = torch.matmul(adj, support)
+            
         if self.bias is not None:
             out += self.bias
         return out
@@ -41,10 +57,10 @@ class GCN(nn.Module):
     def forward(self, x, adj):
         """
         x: (batch_size, T*N, features) - product graph nodes
-        adj: (T*N, T*N) - product graph adjacency
+        adj: sparse COO tensor (T*N, T*N) - product graph adjacency
         Returns: (batch_size, N) - power prediction for N turbines
         """
-        B, TN, num_feat = x.shape  # Changed F to num_feat
+        B, TN, num_feat = x.shape
         N = TN // INPUT_SEQUENCE_LENGTH  # number of turbines
         
         # First GCN layer
@@ -52,7 +68,7 @@ class GCN(nn.Module):
         h = h.view(B * TN, -1)
         h = self.bn1(h)
         h = h.view(B, TN, -1)
-        h = F.relu(h)  # Now F refers to torch.nn.functional
+        h = F.relu(h)
         h = F.dropout(h, self.dropout, training=self.training)
 
         # Second GCN layer
@@ -67,31 +83,43 @@ class GCN(nn.Module):
         out = self.gc3(h, adj)  # (B, T*N, 1)
         
         # Extract predictions for the last time step of each turbine
-        # Nodes are ordered as: (t0,n0), (t0,n1), ..., (t1,n0), ..., (tT-1,nN-1)
         last_time_indices = torch.arange((INPUT_SEQUENCE_LENGTH-1)*N, TN, device=x.device)
         predictions = out[:, last_time_indices, 0]  # (B, N)
         
         return predictions
 
 def normalize_adj(edge_index, num_nodes):
-    """Create normalized adjacency matrix from edge_index"""
-    row, col = edge_index
-    edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
+    """Create normalized sparse adjacency matrix from edge_index"""
+    row, col = edge_index[0], edge_index[1]
     
-    # Degree computation
-    deg = torch.zeros(num_nodes, device=edge_index.device)
+    # Add self-loops
+    loop_index = torch.arange(0, num_nodes, dtype=torch.long, device=edge_index.device)
+    edge_index_with_loops = torch.cat([
+        torch.stack([row, col], dim=0),
+        torch.stack([loop_index, loop_index], dim=0)
+    ], dim=1)
+    
+    row, col = edge_index_with_loops[0], edge_index_with_loops[1]
+    edge_weight = torch.ones(edge_index_with_loops.size(1), device=edge_index.device)
+    
+    # Compute degree
+    deg = torch.zeros(num_nodes, device=edge_index.device, dtype=torch.float)
     deg.scatter_add_(0, row, edge_weight)
-    deg.scatter_add_(0, col, edge_weight)
     
-    # Symmetric normalization D^(-1/2) A D^(-1/2)
+    # Symmetric normalization: D^(-1/2) A D^(-1/2)
     deg_inv_sqrt = deg.pow(-0.5)
     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
     
-    # Create normalized adjacency matrix
-    adj = torch.zeros(num_nodes, num_nodes, device=edge_index.device)
-    adj[row, col] = edge_weight * deg_inv_sqrt[row] * deg_inv_sqrt[col]
+    # Normalize edge weights
+    edge_weight = deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
     
-    return adj
+    # Create sparse tensor in COO format
+    indices = torch.stack([row, col], dim=0)
+    adj_sparse = torch.sparse_coo_tensor(
+        indices, edge_weight, (num_nodes, num_nodes), device=edge_index.device
+    ).coalesce()
+    
+    return adj_sparse
 
 def train_gcn(
     X_train, Y_train, X_val, Y_val, edge_index,
@@ -158,12 +186,9 @@ def train_gcn(
             batch_end = min(i + batch_size, num_samples)
             x_batch = X_train[i:batch_end]
             y_batch = Y_train[i:batch_end]
-            
-            # Expand adjacency for batch
-            adj_batch = adj.unsqueeze(0).expand(x_batch.shape[0], -1, -1)
 
             optimizer.zero_grad()
-            out = model(x_batch, adj_batch)
+            out = model(x_batch, adj)  # Pass sparse adj directly
             loss = criterion(out, y_batch)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
@@ -184,9 +209,8 @@ def train_gcn(
                 batch_end = min(i + batch_size, X_val.shape[0])
                 x_batch = X_val[i:batch_end]
                 y_batch = Y_val[i:batch_end]
-                adj_batch = adj.unsqueeze(0).expand(x_batch.shape[0], -1, -1)
 
-                out = model(x_batch, adj_batch)
+                out = model(x_batch, adj)  # Pass sparse adj directly
                 val_loss += criterion(out, y_batch).item()
                 num_val_batches += 1
 
