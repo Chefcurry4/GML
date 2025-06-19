@@ -1,7 +1,7 @@
 import pandas as pd
 from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 from models.fastGCN import train_fastgcn_from_arrays
-from models.GCN import train_gcn_from_arrays
+from models.GCN import train_gcn
 from models.clusterGCN import train_clustergcn_from_arrays
 from utils.new_data_preprocessing import load_and_preprocess_data
 from utils.graph_construction import build_graph
@@ -59,14 +59,15 @@ def main():
         )
 
     elif args.model_type == 'gcn':
-        model = train_gcn_from_arrays(
+        model = train_gcn(
             X_train, Y_train, X_val, Y_val, edge_index,
             hidden=args.hidden_dimensions,
+            samples=0,  # not used for standard GCN
             dropout=args.dropout_rate,
             epochs=args.epochs,
+            lr=args.learning_rate,
             patience=args.patience,
-            batch_size=args.batch_size,
-            lr=args.learning_rate
+            batch_size=args.batch_size
         )
 
     else:

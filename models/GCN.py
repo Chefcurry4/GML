@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import time
+from config import INPUT_SEQUENCE_LENGTH
 
-# ----------- Graph Convolution Layer --------------
 class GraphConvolution(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
         super().__init__()
@@ -18,13 +18,16 @@ class GraphConvolution(nn.Module):
             nn.init.zeros_(self.bias)
 
     def forward(self, x, adj):
-        support = torch.matmul(x, self.weight)
-        out = torch.matmul(adj, support)
+        """
+        x: (batch_size, num_nodes, in_features)
+        adj: (num_nodes, num_nodes) normalized adjacency matrix
+        """
+        support = torch.matmul(x, self.weight)  # (batch, nodes, out_features)
+        out = torch.matmul(adj, support)        # (batch, nodes, out_features)
         if self.bias is not None:
             out += self.bias
         return out
 
-# ----------- Standard GCN Model --------------
 class GCN(nn.Module):
     def __init__(self, nfeat, nhid, nout, dropout):
         super().__init__()
@@ -36,62 +39,109 @@ class GCN(nn.Module):
         self.dropout = dropout
 
     def forward(self, x, adj):
-        B, N, Fin = x.shape
+        """
+        x: (batch_size, T*N, features) - product graph nodes
+        adj: (T*N, T*N) - product graph adjacency
+        Returns: (batch_size, N) - power prediction for N turbines
+        """
+        B, TN, num_feat = x.shape  # Changed F to num_feat
+        N = TN // INPUT_SEQUENCE_LENGTH  # number of turbines
+        
+        # First GCN layer
         h = self.gc1(x, adj)
-        h = h.view(B * N, -1)
+        h = h.view(B * TN, -1)
         h = self.bn1(h)
-        h = h.view(B, N, -1)
-        h = F.relu(h)
+        h = h.view(B, TN, -1)
+        h = F.relu(h)  # Now F refers to torch.nn.functional
         h = F.dropout(h, self.dropout, training=self.training)
 
+        # Second GCN layer
         h = self.gc2(h, adj)
-        h = h.view(B * N, -1)
+        h = h.view(B * TN, -1)
         h = self.bn2(h)
-        h = h.view(B, N, -1)
+        h = h.view(B, TN, -1)
         h = F.relu(h)
         h = F.dropout(h, self.dropout, training=self.training)
 
-        out = self.gc3(h, adj)
-        return out
+        # Output layer
+        out = self.gc3(h, adj)  # (B, T*N, 1)
+        
+        # Extract predictions for the last time step of each turbine
+        # Nodes are ordered as: (t0,n0), (t0,n1), ..., (t1,n0), ..., (tT-1,nN-1)
+        last_time_indices = torch.arange((INPUT_SEQUENCE_LENGTH-1)*N, TN, device=x.device)
+        predictions = out[:, last_time_indices, 0]  # (B, N)
+        
+        return predictions
 
-# ----------- Normalize Adjacency Matrix --------------
 def normalize_adj(edge_index, num_nodes):
-    adj = torch.zeros((num_nodes, num_nodes), dtype=torch.float32)
-    adj[edge_index[0], edge_index[1]] = 1.0
-    adj = (adj + adj.T) / 2  # Make symmetric
-    deg = adj.sum(1)
-    deg_inv_sqrt = torch.pow(deg + 1e-6, -0.5)
-    deg_inv_sqrt[torch.isinf(deg_inv_sqrt)] = 0.
-    D_inv_sqrt = torch.diag(deg_inv_sqrt)
-    return D_inv_sqrt @ adj @ D_inv_sqrt
+    """Create normalized adjacency matrix from edge_index"""
+    row, col = edge_index
+    edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
+    
+    # Degree computation
+    deg = torch.zeros(num_nodes, device=edge_index.device)
+    deg.scatter_add_(0, row, edge_weight)
+    deg.scatter_add_(0, col, edge_weight)
+    
+    # Symmetric normalization D^(-1/2) A D^(-1/2)
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+    
+    # Create normalized adjacency matrix
+    adj = torch.zeros(num_nodes, num_nodes, device=edge_index.device)
+    adj[row, col] = edge_weight * deg_inv_sqrt[row] * deg_inv_sqrt[col]
+    
+    return adj
 
-# ----------- Train Standard GCN --------------
-def train_gcn_from_arrays(
+def train_gcn(
     X_train, Y_train, X_val, Y_val, edge_index,
-    hidden=32, dropout=0.3, epochs=20,
-    patience=10, batch_size=32, lr=0.01, device="cuda" if torch.cuda.is_available() else "cpu"
+    hidden, samples, dropout, epochs, lr, patience, batch_size
 ):
+    """
+    Train GCN for power output prediction
+    Args:
+        X_train: (num_samples, T*N, F) - input features for product graph
+        Y_train: (num_samples, N) - target power output for N turbines
+        X_val: (num_samples, T*N, F) - validation features
+        Y_val: (num_samples, N) - validation targets
+        edge_index: (2, E) - product graph edges
+        hidden: hidden dimension
+        samples: not used for standard GCN
+        dropout: dropout rate
+        epochs: number of epochs
+        lr: learning rate
+        patience: early stopping patience
+        batch_size: batch size
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    
+    # Convert to tensors
     X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
     Y_train = torch.tensor(Y_train, dtype=torch.float32).to(device)
     X_val = torch.tensor(X_val, dtype=torch.float32).to(device)
     Y_val = torch.tensor(Y_val, dtype=torch.float32).to(device)
+    edge_index = edge_index.to(device)
 
-    B, N, Fin = X_train.shape
-    N_out = Y_train.shape[1]
-    adj = normalize_adj(edge_index, N).to(device)
-    model = GCN(nfeat=Fin, nhid=hidden, nout=1, dropout=dropout).to(device)  # Predict 1 value per node
-
-    print("\n[Standard GCN Architecture]")
-    print(f"Input features: {Fin}")
-    print(f"Hidden dimension: {hidden}")
-    print(f"Dropout rate: {dropout}")
-    print(f"Batch size: {batch_size}")
-    print(f"Output nodes: {N_out}")
-    print(f"Parameters: {sum(p.numel() for p in model.parameters())}")
-
+    # Get dimensions
+    num_samples, num_nodes, num_features = X_train.shape
+    num_turbines = Y_train.shape[1]
+    
+    # Create normalized adjacency matrix
+    adj = normalize_adj(edge_index, num_nodes).to(device)
+    
+    # Initialize model
+    model = GCN(nfeat=num_features, nhid=hidden, nout=1, dropout=dropout).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
-    loss_fn = nn.MSELoss()
+    criterion = nn.MSELoss()
+
+    print(f"\n[GCN Architecture]")
+    print(f"Input features: {num_features}")
+    print(f"Hidden dimension: {hidden}")
+    print(f"Dropout rate: {dropout}")
+    print(f"Output turbines: {num_turbines}")
+    print(f"Parameters: {sum(p.numel() for p in model.parameters())}")
 
     best_val_loss = float('inf')
     patience_counter = 0
@@ -103,16 +153,20 @@ def train_gcn_from_arrays(
         total_loss = 0
         num_batches = 0
 
-        for i in range(0, B, batch_size):
-            x_batch = X_train[i:i+batch_size]  # shape (B, N, F)
-            y_batch = Y_train[i:i+batch_size]  # shape (B, N)
+        # Training loop
+        for i in range(0, num_samples, batch_size):
+            batch_end = min(i + batch_size, num_samples)
+            x_batch = X_train[i:batch_end]
+            y_batch = Y_train[i:batch_end]
+            
+            # Expand adjacency for batch
             adj_batch = adj.unsqueeze(0).expand(x_batch.shape[0], -1, -1)
 
-            out = model(x_batch, adj_batch).squeeze(-1)  # shape (B, N)
-            loss = loss_fn(out, y_batch)
-
             optimizer.zero_grad()
+            out = model(x_batch, adj_batch)
+            loss = criterion(out, y_batch)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             optimizer.step()
 
             total_loss += loss.item()
@@ -121,18 +175,22 @@ def train_gcn_from_arrays(
         avg_train_loss = total_loss / num_batches
         train_losses.append(avg_train_loss)
 
+        # Validation
         model.eval()
         val_loss = 0
+        num_val_batches = 0
         with torch.no_grad():
             for i in range(0, X_val.shape[0], batch_size):
-                x = X_val[i:i+batch_size]
-                y = Y_val[i:i+batch_size]
-                adj_val = adj.unsqueeze(0).expand(x.shape[0], -1, -1)
+                batch_end = min(i + batch_size, X_val.shape[0])
+                x_batch = X_val[i:batch_end]
+                y_batch = Y_val[i:batch_end]
+                adj_batch = adj.unsqueeze(0).expand(x_batch.shape[0], -1, -1)
 
-                out = model(x, adj_val).squeeze(-1)  # shape (B, N)
-                val_loss += loss_fn(out, y).item()
+                out = model(x_batch, adj_batch)
+                val_loss += criterion(out, y_batch).item()
+                num_val_batches += 1
 
-        avg_val_loss = val_loss / (X_val.shape[0] // batch_size)
+        avg_val_loss = val_loss / num_val_batches
         val_losses.append(avg_val_loss)
         scheduler.step(avg_val_loss)
 
@@ -141,14 +199,15 @@ def train_gcn_from_arrays(
         print(f"Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}")
         print(f"Train RMSE: {np.sqrt(avg_train_loss):.4f} | Val RMSE: {np.sqrt(avg_val_loss):.4f}")
 
+        # Early stopping
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print(f"\n⏹ Early stopping triggered after {epoch+1} epochs!")
+                print(f"\nEarly stopping triggered after {epoch+1} epochs!")
                 break
 
-    print("✅ Standard GCN training complete.")
+    print("GCN training complete.")
     return model, train_losses, val_losses
