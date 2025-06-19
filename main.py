@@ -44,7 +44,8 @@ def main():
             epochs=args.epochs,
             lr=args.learning_rate,
             patience=args.patience,
-            batch_size=args.batch_size
+            batch_size=args.batch_size,
+            args=args
         )
 
     elif args.model_type == 'cluster-gcn':
@@ -55,7 +56,8 @@ def main():
             epochs=args.epochs,
             patience=args.patience,
             batch_size=args.batch_size,
-            lr=args.learning_rate
+            lr=args.learning_rate,
+            args=args
         )
 
     elif args.model_type == 'gcn':
@@ -66,7 +68,8 @@ def main():
             epochs=args.epochs,
             lr=args.learning_rate,
             patience=args.patience,
-            batch_size=args.batch_size
+            batch_size=args.batch_size,
+            args=args
         )
 
     else:

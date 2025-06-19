@@ -6,6 +6,7 @@ import time
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import to_dense_batch
 from config import INPUT_SEQUENCE_LENGTH
+from utils.utils import log_train_results
 
 class OptimizedGCN(nn.Module):
     def __init__(self, nfeat, nhid, nout, dropout):
@@ -42,7 +43,7 @@ class OptimizedGCN(nn.Module):
 
 def train_gcn(
     X_train, Y_train, X_val, Y_val, edge_index,
-    hidden, dropout, epochs, lr, patience, batch_size
+    hidden, dropout, epochs, lr, patience, batch_size, args
 ):
     """
     Train GCN for power output prediction
@@ -89,6 +90,9 @@ def train_gcn(
     best_val_loss = float('inf')
     patience_counter = 0
     train_losses, val_losses = [], []
+
+    training_time_seconds = 0
+    actual_epochs_trained = 0
 
     for epoch in range(epochs):
         t_start = time.time()
@@ -172,6 +176,9 @@ def train_gcn(
         print(f"Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}")
         print(f"Train RMSE: {np.sqrt(avg_train_loss):.4f} | Val RMSE: {np.sqrt(avg_val_loss):.4f}")
 
+        training_time_seconds += epoch_time
+        actual_epochs_trained += 1
+
         # Early stopping
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
@@ -183,4 +190,13 @@ def train_gcn(
                 break
 
     print("GCN training complete.")
+
+    # Log training results
+    log_train_results(
+        args=args,
+        num_epochs=actual_epochs_trained,
+        total_time=training_time_seconds,
+        best_val_loss=best_val_loss,
+    )
+
     return model, train_losses, val_losses

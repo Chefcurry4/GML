@@ -7,6 +7,8 @@ from scipy.sparse import coo_matrix
 import networkx as nx
 import community as community_louvain
 
+from utils.utils import log_train_results
+
 # ----------- Graph Convolution Layer --------------
 class GraphConvolution(nn.Module):
     def __init__(self, in_features, out_features, bias=True):
@@ -105,7 +107,7 @@ def build_cluster_adj(edge_index, cluster_nodes):
 def train_clustergcn_from_arrays(
     X_train, Y_train, X_val, Y_val, edge_index,
     hidden=64, dropout=0.1, epochs=20,
-    patience=10, batch_size=32, lr=0.01, device="cuda" if torch.cuda.is_available() else "cpu"
+    patience=10, batch_size=32, lr=0.01, device="cuda" if torch.cuda.is_available() else "cpu", args=None
 ):
     X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
     # Original Y_train: [B, num_turbines]
@@ -122,7 +124,7 @@ def train_clustergcn_from_arrays(
     # Expand to full product graph size
 
 
-    print("🔄 Clustering nodes using Louvain algorithm...")
+    print("Clustering nodes using Louvain algorithm...")
     clusters = louvain_cluster(edge_index)
     print(f"Clusters found: {len(clusters)}")
 
@@ -141,6 +143,9 @@ def train_clustergcn_from_arrays(
     best_val_loss = float('inf')
     patience_counter = 0
     train_losses, val_losses = [], []
+
+    training_time_seconds = 0
+    actual_epochs_trained = 0
 
     for epoch in range(epochs):
         t_start = time.time()
@@ -200,14 +205,26 @@ def train_clustergcn_from_arrays(
         print(f"Train Loss: {avg_train_loss:.6f} | Val Loss: {avg_val_loss:.6f}")
         print(f"Train RMSE: {np.sqrt(avg_train_loss):.4f} | Val RMSE: {np.sqrt(avg_val_loss):.4f}")
 
+        training_time_seconds += epoch_time
+        actual_epochs_trained += 1
+
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print(f"\n⏹ Early stopping triggered after {epoch+1} epochs!")
+                print(f"\nEarly stopping triggered after {epoch+1} epochs!")
                 break
 
-    print("✅ Cluster-GCN training complete.")
+    print("Cluster-GCN training complete.")
+
+    # Log training results
+    log_train_results(
+        args=args,
+        num_epochs=actual_epochs_trained,
+        total_time=training_time_seconds,
+        best_val_loss=best_val_loss,
+    )
+
     return model, train_losses, val_losses
