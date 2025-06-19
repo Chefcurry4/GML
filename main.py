@@ -62,7 +62,6 @@ def main():
         model = train_gcn(
             X_train, Y_train, X_val, Y_val, edge_index,
             hidden=args.hidden_dimensions,
-            samples=0,  # not used for standard GCN
             dropout=args.dropout_rate,
             epochs=args.epochs,
             lr=args.learning_rate,

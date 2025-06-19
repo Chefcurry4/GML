@@ -42,7 +42,7 @@ class OptimizedGCN(nn.Module):
 
 def train_gcn(
     X_train, Y_train, X_val, Y_val, edge_index,
-    hidden, samples, dropout, epochs, lr, patience, batch_size
+    hidden, dropout, epochs, lr, patience, batch_size
 ):
     """
     Train GCN for power output prediction
@@ -52,8 +52,7 @@ def train_gcn(
         X_val: (num_samples, T*N, F) - validation features
         Y_val: (num_samples, N) - validation targets
         edge_index: (2, E) - product graph edges
-        hidden: hidden dimension
-        samples: not used for standard GCN
+        hidden: number of hidden units in GCN layers
         dropout: dropout rate
         epochs: number of epochs
         lr: learning rate
