@@ -34,14 +34,14 @@ def build_spatial_graph(location_df, args):
 
     # 2) build raw row/col lists
     if graph_type == GRAPH_TYPE.RADIUS:
-        radius = SPATIAL_RADIUS
+        radius = args.spatial_radius
         if radius is None:
             raise ValueError("radius required for radius graph")
         rows, cols = np.where(D <= radius)
 
     elif graph_type == GRAPH_TYPE.KNN:
         # * Note that kNN calculates the k nearest neighbors per node. In an undirected graph, this means that nodes might have more than k neighbors. However, each node has at least k neighbors.
-        k = K_NEIGHBORS
+        k = args.knn_neighbors
         if k is None:
             raise ValueError("k required for kNN graph")
         nbrs = NearestNeighbors(n_neighbors=k+1).fit(locations)
