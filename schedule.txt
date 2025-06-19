@@ -1,63 +1,63 @@
 # Example
-# knn fast-gcn --data-subset 0.2 --epochs 40 --dropout-rate 0.35 --hidden-dimension 128 --batch-size 128 --patience 10 --learning-rate 0.01
+# knn fast-gcn --data-subset 0.2 --epochs 20 --dropout-rate 0.35 --hidden-dimension 128 --batch-size 128 --patience 10 --learning-rate 0.01
 
 ###############################################################################
 # GCN
 # GCN with knn (5)
-knn gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 # GCN with knn (10)
-knn gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 
 # GCN with radius
-radius gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-radius gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-radius gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 
 # GCN with domdir
-domdir gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-domdir gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-domdir gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 ###############################################################################
@@ -65,60 +65,60 @@ domdir gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-ra
 
 # Fast GCN
 # Fast GCN with knn (5)
-knn fast-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn fast-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn fast-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn fast-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn fast-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn fast-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 # fast-gcn with knn (10)
-knn fast-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn fast-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn fast-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn fast-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn fast-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn fast-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn fast-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn fast-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 
 # fast-gcn with radius
-radius fast-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius fast-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius fast-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius fast-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius fast-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius fast-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-radius fast-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius fast-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius fast-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius fast-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius fast-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius fast-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-radius fast-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius fast-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius fast-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius fast-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius fast-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius fast-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 
 # fast-gcn with domdir
-domdir fast-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir fast-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir fast-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir fast-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir fast-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir fast-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-domdir fast-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir fast-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir fast-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir fast-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir fast-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir fast-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-domdir fast-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir fast-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir fast-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir fast-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir fast-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir fast-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 ###############################################################################
@@ -126,60 +126,60 @@ domdir fast-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learni
 
 # Cluster GCN
 # cluster-gcn with knn (5)
-knn cluster-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn cluster-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn cluster-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn cluster-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn cluster-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn cluster-gcn --knn-neighbors 5 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 # cluster-gcn with knn (10)
-knn cluster-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn cluster-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn cluster-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn cluster-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-knn cluster-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-knn cluster-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+knn cluster-gcn --knn-neighbors 10 --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+knn cluster-gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 
 # cluster-gcn with radius
-radius cluster-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius cluster-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius cluster-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius cluster-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius cluster-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius cluster-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-radius cluster-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius cluster-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius cluster-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius cluster-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius cluster-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius cluster-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-radius cluster-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius cluster-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-radius cluster-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+radius cluster-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius cluster-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+radius cluster-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 
 # cluster-gcn with domdir
-domdir cluster-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir cluster-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir cluster-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir cluster-gcn --batch-size 32 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir cluster-gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir cluster-gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-domdir cluster-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir cluster-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir cluster-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir cluster-gcn --batch-size 32 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir cluster-gcn --batch-size 64 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir cluster-gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
-domdir cluster-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir cluster-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
-domdir cluster-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 40 --patience 8
+domdir cluster-gcn --batch-size 32 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir cluster-gcn --batch-size 64 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
+domdir cluster-gcn --batch-size 128 --hidden-dimensions 256 --dropout 0.35 --learning-rate 0.001 --data-subset 0.2 --epochs 20 --patience 4
 
 ###############################################################################
 ###############################################################################
