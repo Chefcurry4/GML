@@ -21,7 +21,8 @@ def main():
         train_val_ratio=TRAIN_VAL_SPLIT_RATIO,
         data_subset=args.data_subset,
         data_subset_turbines=args.data_subset_turbines,
-        shuffle_train_val_dataset=SHUFFLE_TRAIN_VAL_DATASET
+        shuffle_train_val_dataset=SHUFFLE_TRAIN_VAL_DATASET,
+        args=args
     )
     # ===========================================================
 

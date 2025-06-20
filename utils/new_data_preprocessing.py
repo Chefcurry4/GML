@@ -1,9 +1,11 @@
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 # ADDED: Import StandardScaler for feature and target scaling
 from sklearn.preprocessing import StandardScaler
 from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
+from utils.utils import plot_power_output
 
 # Do not use TurbID, Day and Tmstamp as features, since they are not physical quantities and do not provide useful information for the model.
 feature_names = [
@@ -117,7 +119,7 @@ def sliding_window(data: np.ndarray, input_len: int, output_len: int):
 
 
 # MODIFIED: The function signature and return values have changed.
-def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_ratio=0.8, data_subset=1, data_subset_turbines=-1, shuffle_train_val_dataset = True, random_state=42):
+def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_ratio=0.8, data_subset=1, data_subset_turbines=-1, shuffle_train_val_dataset = True, random_state=42, args=None):
     """
     MODIFIED: This function now includes interpolation and scaling for both features (X) and targets (Y).
     Returns:
@@ -219,6 +221,20 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
 
     print("Preprocessing, interpolation, and scaling complete")
     print("==========================================================\n")
+
+    # Plot some power output graphs
+    if args.plot_images:
+        num_plots = 10
+        for i in range(num_plots):
+            patv_idx = feature_names.index('Patv')
+            turbine_ids = [0, 12, 34, 42, 69, 120]
+            save_dir = os.path.join(args.image_path, 'patv_plots_scaled')
+
+            # Plot for training data
+            plot_power_output(X_train_scaled[i], Y_train_scaled[i], turbine_ids=turbine_ids, image_name=f"patv_train_{i}.png", patv_idx=patv_idx, save_dir=save_dir)
+
+            # Plot for validation data
+            plot_power_output(X_val_scaled[i], Y_val_scaled[i], turbine_ids=turbine_ids, image_name=f"patv_val_{i}.png", patv_idx=patv_idx, save_dir=save_dir)
 
     # MODIFIED: Return the scaled data and the y_scaler object.
     return X_train_scaled, Y_train_scaled, X_val_scaled, Y_val_scaled, locations_df
