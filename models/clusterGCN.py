@@ -70,7 +70,7 @@ def louvain_cluster(edge_index):
     import community as community_louvain
 
     G = nx.Graph()
-    edges = edge_index.T.cpu().numpy()
+    edges = edge_index.T.numpy()
     G.add_edges_from(edges)
 
     partition = community_louvain.best_partition(G)
