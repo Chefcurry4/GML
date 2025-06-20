@@ -203,21 +203,23 @@ def build_graph(locations_df, args: Args):
     edge_index_spatial, locations = build_spatial_graph(locations_df, args)
 
     # Visualize the spatial graph and store the image
-    visualize_spatial_graph(
-        edge_index_spatial,
-        locations,
-        save_path=f"{images_path}/spatial_graph_gnn.png",
-    )
+    if args.plot_images:
+        visualize_spatial_graph(
+            edge_index_spatial,
+            locations,
+            save_path=f"{images_path}/spatial_graph_gnn.png",
+        )
 
     # Build temporal graph template for the window size (needed by collate_fn)
     temp_edge_index = build_temporal_graph(INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE)
 
     # Visualize the temporal graph
-    visualize_temporal_graph(
-        temp_edge_index,
-        num_time_steps=INPUT_SEQUENCE_LENGTH,
-        save_path=f"{images_path}/temporal_graph_gnn.png"
-    )
+    if args.plot_images:
+        visualize_temporal_graph(
+            temp_edge_index,
+            num_time_steps=INPUT_SEQUENCE_LENGTH,
+            save_path=f"{images_path}/temporal_graph_gnn.png"
+        )
 
     # Get the number of turbines
     num_turbines = locations_df.shape[0]
@@ -229,16 +231,18 @@ def build_graph(locations_df, args: Args):
         temporal_edge_index=temp_edge_index,
         T=INPUT_SEQUENCE_LENGTH
     )
+
     # Visualize the spatio-temporal product graph
-    visualize_spatio_temporal_graph(
-        st_edge_index=spatio_temporal_edge_index,
-        locations=locations,
-        N=num_turbines,
-        T=INPUT_SEQUENCE_LENGTH,
-        time_offset=4*1800,            # horizontal separation between layers
-        save_path=f"{images_path}/spatio_temporal_product_graph_gnn.png",
-        node_size=5
-    )
+    if args.plot_images:
+        visualize_spatio_temporal_graph(
+            st_edge_index=spatio_temporal_edge_index,
+            locations=locations,
+            N=num_turbines,
+            T=INPUT_SEQUENCE_LENGTH,
+            time_offset=4*1800,            # horizontal separation between layers
+            save_path=f"{images_path}/spatio_temporal_product_graph_gnn.png",
+            node_size=5
+        )
 
     if spatio_temporal_edge_index.numel() == 0 and num_turbines > 0 and INPUT_SEQUENCE_LENGTH > 0:
         raise RuntimeError("Warning: Product graph template is empty, but data exists. Check graph construction parameters.")

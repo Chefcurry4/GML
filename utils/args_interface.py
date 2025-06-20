@@ -23,6 +23,7 @@ class Args:
     learning_rate: float = 0.001
     knn_neighbors: int = 5
     spatial_radius: int = 1500
+    plot_images: bool = False
 
 def parse_args() -> Args:
     import argparse
@@ -57,6 +58,9 @@ def parse_args() -> Args:
     # spatial radius
     parser.add_argument('--spatial-radius', type=int, default=1500, help='Radius for spatial graph; when radius is selected (default: 1500)')
 
+    # Flag to plot images
+    parser.add_argument('--plot-images', action='store_true', default=False, help='Plot images during training')
+
     parsed = parser.parse_args()
 
     # Set graph type correctly
@@ -77,6 +81,7 @@ def parse_args() -> Args:
     print(f"  Learning rate: {parsed.learning_rate}")
     print(f"  KNN neighbors: {parsed.knn_neighbors}")
     print(f"  Spatial radius: {parsed.spatial_radius}")
+    print(f"  Plot images: {parsed.plot_images}")
 
     return Args(
         spatial_graph_type=parsed.spatial_graph_type,
@@ -91,5 +96,6 @@ def parse_args() -> Args:
         patience=parsed.patience,
         learning_rate=parsed.learning_rate,
         knn_neighbors=parsed.knn_neighbors,
-        spatial_radius=parsed.spatial_radius
+        spatial_radius=parsed.spatial_radius,
+        plot_images=parsed.plot_images
     )
