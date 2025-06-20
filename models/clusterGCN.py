@@ -84,11 +84,13 @@ def louvain_cluster(edge_index):
     return clusters
 
 # ----------- Build per-cluster adjacency matrix --------------
-def build_cluster_adj(edge_index, cluster_nodes):
+def build_cluster_adj(edge_index, cluster_nodes, device="cpu"):
     node_map = {n: i for i, n in enumerate(cluster_nodes)}
     edges = [(node_map[u], node_map[v]) for u, v in edge_index.T.tolist() if u in node_map and v in node_map]
     if not edges:
-        return torch.eye(len(cluster_nodes))
+        adj = torch.eye(len(cluster_nodes))
+        # Move to right device and return
+        return adj.to(device)
 
     rows, cols = zip(*edges)
     data = np.ones(len(rows))
@@ -101,7 +103,9 @@ def build_cluster_adj(edge_index, cluster_nodes):
     D_mat = coo_matrix((D_inv_sqrt, (np.arange(len(D)), np.arange(len(D)))), shape=A.shape)
     A_norm = D_mat @ A @ D_mat
 
-    return torch.tensor(A_norm.toarray(), dtype=torch.float32)
+    adj = torch.tensor(A_norm.toarray(), dtype=torch.float32)
+    # Move to right device and return
+    return adj.to(device)
 
 # ----------- Training Cluster-GCN --------------
 def train_clustergcn_from_arrays(
@@ -122,6 +126,9 @@ def train_clustergcn_from_arrays(
     Y_val = torch.tensor(Y_val, dtype=torch.float32).to(device)
     print(f"Y_val shape: {Y_val.shape}")
     # Expand to full product graph size
+
+    # Ensure that edge_indes is on the right device
+    edge_index = edge_index.to(device)
 
 
     print("Clustering nodes using Louvain algorithm...")
@@ -157,7 +164,7 @@ def train_clustergcn_from_arrays(
             if len(nodes) < 2:
                 continue
 
-            adj = build_cluster_adj(edge_index, nodes).to(device)
+            adj = build_cluster_adj(edge_index, nodes, device=device)
             edge_idx = adj.nonzero().T
 
             x_cluster = X_train[:, nodes, :]
