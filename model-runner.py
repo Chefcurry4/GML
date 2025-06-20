@@ -2,9 +2,20 @@ import subprocess
 import os
 import sys
 from datetime import datetime
+import threading
 
 output_dir = "output/model_runs/"
 pipeline_file = "main.py"
+
+def stream_output(pipe, file_handle, prefix=""):
+    """Stream subprocess output to both console and file"""
+    for line in iter(pipe.readline, ''):
+        if line:
+            # Print to console with optional prefix
+            print(f"{prefix}{line}", end='')
+            # Write to file
+            file_handle.write(line)
+            file_handle.flush()  # Ensure immediate write
 
 def main():
     if len(sys.argv) != 2:
@@ -36,20 +47,63 @@ def main():
         
         # Use the same Python interpreter that's running this script
         cmd = [sys.executable, pipeline_file] + line.split()
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
-        # Save stdout and stderr
-        with open(os.path.join(run_output_dir, f"run{run_num}_stdout.txt"), "w", encoding='utf-8') as out_f:
-            out_f.write(result.stdout)
-        with open(os.path.join(run_output_dir, f"run{run_num}_stderr.txt"), "w", encoding='utf-8') as err_f:
-            err_f.write(result.stderr)
+        
+        # Open output files
+        stdout_file = os.path.join(run_output_dir, f"run{run_num}_stdout.txt")
+        stderr_file = os.path.join(run_output_dir, f"run{run_num}_stderr.txt")
+        
+        with open(stdout_file, "w", encoding='utf-8') as out_f, \
+            open(stderr_file, "w", encoding='utf-8') as err_f:
+            
+            # Set environment variables to directly print output
+            env = os.environ.copy()
+            env['PYTHONUNBUFFERED'] = '1'
+            
+            # Start subprocess with pipes
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=0,
+                universal_newlines=True,
+                env=env
+            )
+            
+            # Create threads to handle stdout and stderr streams
+            stdout_thread = threading.Thread(
+                target=stream_output,
+                args=(process.stdout, out_f, "")  # Removed prefix for cleaner output
+            )
+            stderr_thread = threading.Thread(
+                target=stream_output,
+                args=(process.stderr, err_f, "[ERR] ")
+            )
+            
+            # Start threads
+            stdout_thread.start()
+            stderr_thread.start()
+            
+            # Wait for process to complete
+            return_code = process.wait()
+            
+            # Wait for threads to finish
+            stdout_thread.join()
+            stderr_thread.join()
 
         # Print status
-        if result.returncode == 0:
-            print(f"Run #{run_num} completed successfully.")
+        if return_code == 0:
+            print(f"\nRun #{run_num} completed successfully.")
         else:
-            print(f"Run #{run_num} failed with return code {result.returncode}")
-            print(f"Error: {result.stderr[:200]}...")  # Show first 200 chars of error
+            print(f"\nRun #{run_num} failed with return code {return_code}")
+            # Show error from file
+            try:
+                with open(stderr_file, 'r') as f:
+                    error_content = f.read()
+                    if error_content.strip():
+                        print(f"Error: {error_content[:200]}...")
+            except:
+                pass
 
         run_num += 1
 
