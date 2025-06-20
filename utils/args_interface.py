@@ -1,6 +1,8 @@
 from typing import List, Optional
 from dataclasses import dataclass
 from enum import Enum
+import datetime
+import os
 
 # Constants and enums
 class GRAPH_TYPE(Enum):
@@ -24,6 +26,7 @@ class Args:
     knn_neighbors: int = 5
     spatial_radius: int = 1500
     plot_images: bool = False
+    image_path: str = ''
 
 def parse_args() -> Args:
     import argparse
@@ -61,10 +64,20 @@ def parse_args() -> Args:
     # Flag to plot images
     parser.add_argument('--plot-images', action='store_true', default=False, help='Plot images during training')
 
+    # Image path
+    parser.add_argument('--image-path', type=str, default='', help='Path to save images during training (default will be images/<datetime>)')
+
     parsed = parser.parse_args()
 
     # Set graph type correctly
     parsed.spatial_graph_type = GRAPH_TYPE(parsed.spatial_graph_type)
+
+    # Set default image path if not provided
+    if parsed.image_path == '':
+        timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        images_path = f"images/{timestamp_str}"
+        parsed.image_path = images_path
+    os.makedirs(images_path, exist_ok=True)
 
     # Print a summary of the arguments
     print("Settings:")
@@ -82,6 +95,7 @@ def parse_args() -> Args:
     print(f"  KNN neighbors: {parsed.knn_neighbors}")
     print(f"  Spatial radius: {parsed.spatial_radius}")
     print(f"  Plot images: {parsed.plot_images}")
+    print(f"  Image path: {parsed.image_path}")
 
     return Args(
         spatial_graph_type=parsed.spatial_graph_type,
@@ -97,5 +111,6 @@ def parse_args() -> Args:
         learning_rate=parsed.learning_rate,
         knn_neighbors=parsed.knn_neighbors,
         spatial_radius=parsed.spatial_radius,
-        plot_images=parsed.plot_images
+        plot_images=parsed.plot_images,
+        image_path=parsed.image_path
     )

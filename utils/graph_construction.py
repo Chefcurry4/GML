@@ -195,9 +195,7 @@ def build_graph(locations_df, args: Args):
     print("Building spatio-temporal graphs")
 
     # Make sure directory to save images exists
-    timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    images_path = f"GML/images/{timestamp_str}"
-    os.makedirs(images_path, exist_ok=True)
+    images_path = args.image_path
 
     # Build the spatial graph
     edge_index_spatial, locations = build_spatial_graph(locations_df, args)

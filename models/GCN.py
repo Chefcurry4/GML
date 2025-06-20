@@ -6,7 +6,7 @@ import time
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import to_dense_batch
 from config import INPUT_SEQUENCE_LENGTH
-from utils.utils import log_train_results
+from utils.utils import log_train_results, plot_training_curves
 
 class OptimizedGCN(nn.Module):
     def __init__(self, nfeat, nhid, nout, dropout):
@@ -198,5 +198,14 @@ def train_gcn(
         total_time=training_time_seconds,
         best_val_loss=best_val_loss,
     )
+
+    # Log training curve
+    if args.plot_images:
+        plot_training_curves(
+            train_losses=train_losses,
+            val_losses=val_losses,
+            model_name="GCN",
+            save_dir=args.image_path
+        )
 
     return model, train_losses, val_losses

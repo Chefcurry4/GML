@@ -488,3 +488,42 @@ def log_train_results(args, num_epochs, total_time, best_val_loss, log_file_name
         writer.writerow(row_data)
     
     print(f"Training results logged to {log_file_path}")
+
+def plot_training_curves(train_losses, val_losses, model_name, save_dir="plots"):
+    """
+    Plot and save training and validation loss curves
+    
+    Args:
+        train_losses: List of training losses per epoch
+        val_losses: List of validation losses per epoch
+        model_name: Name of the model for the plot title and filename
+        save_dir: Directory to save the plot
+    """
+    # Create plots directory if it doesn't exist
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Create the plot
+    plt.figure(figsize=(10, 6))
+    epochs = range(1, len(train_losses) + 1)
+    
+    plt.plot(epochs, train_losses, 'b-', label='Training Loss', linewidth=2)
+    plt.plot(epochs, val_losses, color='orange', label='Validation Loss', linewidth=2)
+    
+    plt.title(f'{model_name} - Training and Validation Loss', fontsize=14, fontweight='bold')
+    plt.xlabel('Epoch', fontsize=12)
+    plt.ylabel('Loss (MSE)', fontsize=12)
+    plt.legend(fontsize=12)
+    plt.grid(True, alpha=0.3)
+    
+    # Add some styling
+    plt.tight_layout()
+    
+    # Save the plot
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{model_name.lower().replace(' ', '_')}_loss_curves_{timestamp}.png"
+    filepath = os.path.join(save_dir, filename)
+    
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    print(f"Loss curves saved to: {filepath}")
+    
+    plt.close()  # Close the figure to free memory
