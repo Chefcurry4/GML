@@ -1,21 +1,21 @@
 ###############################################################################
 # GCN
 # GCN with knn (5)
-knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
-knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
+knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+knn gcn --knn-neighbors 5 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
 
 # GCN with knn (10)
-knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
-knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
+knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+knn gcn --knn-neighbors 10 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
 
 # GCN with radius (1000)
-radius gcn --spatial-radius 1000 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
-radius gcn --spatial-radius 1000 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
+radius gcn --spatial-radius 1000 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+radius gcn --spatial-radius 1000 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
 
 # GCN with radius (2000)
-radius gcn --spatial-radius 2000 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
-radius gcn --spatial-radius 2000 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
+radius gcn --spatial-radius 2000 --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+radius gcn --spatial-radius 2000 --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
 
 # GCN domdir
-domdir gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
-domdir gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10
+domdir gcn --batch-size 128 --hidden-dimensions 64 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+domdir gcn --batch-size 128 --hidden-dimensions 128 --dropout 0.35 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
