@@ -607,5 +607,3 @@ def plot_power_output(X_sample, Y_sample, turbine_ids, image_name="patv_plot.png
     save_path = os.path.join(save_dir, image_name)
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
-    print(f"Power output plot saved to {save_path}")
