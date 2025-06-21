@@ -1,11 +1,12 @@
 import os
+from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 # ADDED: Import StandardScaler for feature and target scaling
 from sklearn.preprocessing import StandardScaler
 from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
-from utils.utils import plot_power_output
+from utils.utils import plot_data_histogram, plot_power_output
 
 # Do not use TurbID, Day and Tmstamp as features, since they are not physical quantities and do not provide useful information for the model.
 feature_names = [
@@ -118,7 +119,9 @@ def sliding_window(data: np.ndarray, input_len: int, output_len: int):
     return X, Y
 
 
-# MODIFIED: The function signature and return values have changed.
+def get_patv_feature_idx():
+    return feature_names.index('Patv')
+
 def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_ratio=0.8, data_subset=1, data_subset_turbines=-1, shuffle_train_val_dataset = True, random_state=42, args=None):
     """
     MODIFIED: This function now includes interpolation and scaling for both features (X) and targets (Y).
@@ -162,9 +165,6 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
     # Pivot the data for easier computation with sliding window
     data = pivot_sdwpf_multi(df_subset) # shape: (timesteps, turbines, features)
     print("Pivoted data shape:", data.shape)
-
-    # MODIFIED: The check for NaNs is removed from here because we EXPECT NaNs at this stage.
-    # if np.isnan(data).any(): ...
     
     # ADDED: Interpolation step to fill the NaN values.
     # This is done on the 3D numpy array by iterating through turbines and features.
@@ -189,26 +189,26 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
     print(f"Flattened X shape: {X.shape}")
     print(f"Flattened Y shape: {Y.shape}")
 
-    # Train/val split
-    X_train, X_val, Y_train, Y_val = train_test_split(
-        X, Y, train_size=train_val_ratio, random_state=random_state, shuffle=shuffle_train_val_dataset
-    )
-
-    # ADDED: Scale features (X) and targets (Y) *after* splitting the data.
+    # Scale data
     print("Scaling features and target variable...")
-    
-    # Scale X (features)
     x_scaler = StandardScaler()
     # Reshape to 2D for scaler, fit on training data, then transform and reshape back to 3D
-    nsamples, nsteps, nfeatures = X_train.shape
-    X_train_scaled = x_scaler.fit_transform(X_train.reshape(-1, nfeatures)).reshape(nsamples, nsteps, nfeatures)
-    nsamples, nsteps, nfeatures = X_val.shape
-    X_val_scaled = x_scaler.transform(X_val.reshape(-1, nfeatures)).reshape(nsamples, nsteps, nfeatures)
-    
-    # Scale Y (target)
+    # Scale X
+    nsamples, nsteps, nfeatures = X.shape
+    X_scaled = x_scaler.fit_transform(X.reshape(-1, nfeatures)).reshape(nsamples, nsteps, nfeatures)
+    # Scale Y
     y_scaler = StandardScaler()
-    Y_train_scaled = y_scaler.fit_transform(Y_train)
-    Y_val_scaled = y_scaler.transform(Y_val)
+    Y_scaled = y_scaler.fit_transform(Y)
+
+    # Plot histograms of the Patv values to see their distribution
+    if args.plot_images:
+        plot_data_histogram(X, get_patv_feature_idx(), image_path=args.image_path, filename="patv_histogram_x.png", title="Histogram of Patv Values (X)")
+        plot_data_histogram(X_scaled, get_patv_feature_idx(), image_path=args.image_path, filename="patv_histogram_x_scaled.png", title="Histogram of Scaled Patv Values (X_scaled)")
+
+    # Train/val split
+    X_train_scaled, X_val_scaled, Y_train_scaled, Y_val_scaled = train_test_split(
+        X_scaled, Y_scaled, train_size=train_val_ratio, random_state=random_state, shuffle=shuffle_train_val_dataset
+    )
 
     # Print the sizes of the resulting datasets
     print(f"Training set size: {X_train_scaled.shape}, {Y_train_scaled.shape}")
@@ -219,14 +219,11 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
     if data_subset_turbines > 0:
         locations_df = locations_df[locations_df['TurbID'] <= data_subset_turbines].reset_index(drop=True)
 
-    print("Preprocessing, interpolation, and scaling complete")
-    print("==========================================================\n")
-
     # Plot some power output graphs
     if args.plot_images:
         num_plots = 10
         for i in range(num_plots):
-            patv_idx = feature_names.index('Patv')
+            patv_idx = get_patv_feature_idx()
             turbine_ids = [0, 12, 34, 42, 69, 120]
             save_dir = os.path.join(args.image_path, 'patv_plots_scaled')
 
@@ -236,6 +233,9 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
             # Plot for validation data
             plot_power_output(X_val_scaled[i], Y_val_scaled[i], turbine_ids=turbine_ids, image_name=f"patv_val_{i}.png", patv_idx=patv_idx, save_dir=save_dir)
 
-    # MODIFIED: Return the scaled data and the y_scaler object.
+    print("Preprocessing, interpolation, and scaling complete")
+    print("==========================================================\n")
+
+    # Return the scaled data split into training and validation and locations DataFrame
     return X_train_scaled, Y_train_scaled, X_val_scaled, Y_val_scaled, locations_df
 

@@ -218,7 +218,8 @@ def visualize_spatial_graph(
     node_color: str = "blue",
     edge_color: str = "gray",
     edge_width: float = 0.5,
-    dpi: int = 500
+    dpi: int = 500,
+    draw_node_number: bool = False
 ):
     """
     Visualize and save a 2D plot of the spatial graph.
@@ -251,6 +252,8 @@ def visualize_spatial_graph(
     fig, ax = plt.subplots(figsize=(8, 8))
     nx.draw_networkx_nodes(G, pos, node_size=node_size, node_color=node_color, ax=ax)
     nx.draw_networkx_edges(G, pos, edge_color=edge_color, width=edge_width, ax=ax)
+    if draw_node_number:
+        nx.draw_networkx_labels(G, pos, font_size=10, font_color='black', ax=ax)
     ax.set_aspect('equal')
     ax.axis('off')
     plt.tight_layout()
@@ -605,5 +608,109 @@ def plot_power_output(X_sample, Y_sample, turbine_ids, image_name="patv_plot.png
     
     # Save the plot
     save_path = os.path.join(save_dir, image_name)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+
+def plot_power_output_and_prediction(X_sample, Y_sample, Y_prediction, turbine_ids, image_name="patv_plot.png", save_dir="images", patv_idx=10):
+    """
+    Plot the Patv (active power) attribute over time windows from X_sample, Y_sample, and Y_prediction.
+    
+    Args:
+        X_sample: Single sample from X_train with shape (sliding_window_size * num_turbines, features_per_turbine)
+        Y_sample: Single sample from Y_train with shape (num_turbines,) - true target
+        Y_prediction: Single sample of predictions with shape (num_turbines,)
+        turbine_ids: List of turbine indices to plot
+        image_name: Name of the output image file
+        save_dir: Directory to save the plot
+        patv_idx: Index of the Patv feature in the feature dimension
+    """
+    # Create directory if it doesn't exist
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Determine dimensions from X_sample
+    total_nodes = X_sample.shape[0]
+    features_per_turbine = X_sample.shape[1]
+    
+    # Calculate number of turbines and time steps
+    num_turbines = Y_sample.shape[0]
+    sliding_window_size = total_nodes // num_turbines
+    
+    # Reshape X_sample back to (sliding_window_size, num_turbines, features_per_turbine)
+    X_reshaped = X_sample.reshape(sliding_window_size, num_turbines, features_per_turbine)
+    
+    # Extract Patv values for input sequence
+    patv_input = X_reshaped[:, :, patv_idx]  # Shape: (sliding_window_size, num_turbines)
+    
+    # Create time axis
+    input_time = list(range(sliding_window_size))
+    output_time = [sliding_window_size]  # Next time step for prediction
+    
+    # Create the plot
+    plt.figure(figsize=(12, 8))
+    
+    # Plot for each requested turbine
+    for turb_id in turbine_ids:
+        if turb_id < num_turbines:
+            # Plot input sequence
+            plt.plot(input_time, patv_input[:, turb_id], 
+                    label=f'Turbine {turb_id} (Input)', 
+                    marker='o', markersize=4, linewidth=2)
+            
+            # Plot target value
+            plt.plot(output_time, [Y_sample[turb_id]], 
+                    marker='s', markersize=8, 
+                    label=f'Turbine {turb_id} (Target)', 
+                    linestyle='None', color='green')
+            
+            # Plot prediction value
+            plt.plot(output_time, [Y_prediction[turb_id]], 
+                    marker='^', markersize=8, 
+                    label=f'Turbine {turb_id} (Prediction)', 
+                    linestyle='None', color='orange')
+            
+            # Connect last input point to target with dashed line
+            plt.plot([input_time[-1], output_time[0]], 
+                    [patv_input[-1, turb_id], Y_sample[turb_id]], 
+                    '--', alpha=0.5, color='green')
+            
+            # Connect last input point to prediction with dashed line
+            plt.plot([input_time[-1], output_time[0]], 
+                    [patv_input[-1, turb_id], Y_prediction[turb_id]], 
+                    '--', alpha=0.5, color='orange')
+    
+    # Customize plot
+    plt.xlabel('Time Step', fontsize=12)
+    plt.ylabel('Active Power (Patv)', fontsize=12)
+    plt.title(f'Power Output Over Time - Sample Visualization', fontsize=14, fontweight='bold')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.grid(True, alpha=0.3)
+    
+    # Add vertical line to separate input and prediction
+    plt.axvline(x=sliding_window_size-0.5, color='red', linestyle=':', alpha=0.7, 
+                label='Input/Prediction Boundary')
+    
+    # Add annotations
+    plt.text(sliding_window_size/2, plt.ylim()[1]*0.95, 'Input Sequence', 
+             ha='center', fontsize=10, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7))
+    plt.text(sliding_window_size, plt.ylim()[1]*0.95, 'Target/Prediction', 
+             ha='center', fontsize=10, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen", alpha=0.7))
+    
+    plt.tight_layout()
+    
+    # Save the plot
+    save_path = os.path.join(save_dir, image_name)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+
+def plot_data_histogram(data, feature_idx, image_path="images", image_name="x_scaled_histogram.png", title="Histogram of Data"):
+    patv_values = data[..., feature_idx].flatten()
+    plt.figure(figsize=(8, 5))
+    plt.hist(patv_values, bins=100, color='skyblue', edgecolor='black')
+    plt.title(title)
+    plt.xlabel("Patv Value")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    save_path = os.path.join(image_path, image_name)
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
