@@ -19,7 +19,7 @@ OUTPUT_SEQUENCE_LENGTH = 1 # Number of future time steps to predict (e.g., 10 mi
 
 # Dataset
 TRAIN_VAL_SPLIT_RATIO = 0.8 # Ratio of data used for training divided by whole data
-SHUFFLE_TRAIN_VAL_DATASET = True # Whether to shuffle the training and validation data. The sliding window will still work
+SHUFFLE_TRAIN_VAL_DATASET = False # Whether to shuffle the training and validation data. The sliding window will still work
 
 # Graph Construction
 SPATIAL_GRAPH_TYPE = 'radius'  # 'radius' or 'knn'
