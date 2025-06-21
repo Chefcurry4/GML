@@ -1,16 +1,23 @@
-# Wind Power Forecasting with GNN and GRU Models
+# 🌤️💨 Wind Power Forecasting with GNN and GRU Models 
 
-This project implements wind power forecasting using both Graph Neural Networks (GNN) and Gated Recurrent Units (GRU). It handles spatial-temporal data from multiple wind turbines, incorporating both temporal dependencies and spatial relationships between turbines.
+Accurate wind power forecasting is essential for reliable integration of renewable energy into modern power markets. This project tackles the dual challenge of modeling both temporal patterns and spatial dependencies between turbines—without relying on expensive physical simulations or sacrificing scalability as wind farms grow.
 
-TODO: rework README!
+We investigate the practical scalability and forecasting performance of various Graph Convolutional Network (GCN) architectures for short-term, turbine-level wind power prediction. Our methodology constructs a spatio-temporal product graph using multiple spatial graph formulations to capture both spatial and temporal dependencies.
+
+This repository provides a comprehensive pipeline for implementing, benchmarking, and experimenting with these GNN models on the [SDWPF dataset](https://pmc.ncbi.nlm.nih.gov/articles/PMC11187227/).
 
 ## 📋 Table of Contents
-- [Installation](#installation)
-- [Project Structure](#project-structure)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Data Format](#data-format)
-- [Models](#models)
+- [🌤️💨 Wind Power Forecasting with GNN and GRU Models](#️-wind-power-forecasting-with-gnn-and-gru-models)
+  - [📋 Table of Contents](#-table-of-contents)
+  - [🔧 Installation](#-installation)
+  - [🏗️ Project Structure](#️-project-structure)
+  - [🚀 Usage](#-usage)
+    - [Download Data](#download-data)
+    - [Running experiments](#running-experiments)
+  - [🏃 Model Runner](#-model-runner)
+  - [⚙️ Configuration](#️-configuration)
+  - [📊 Data Description](#-data-description)
+  - [📈 Future Work](#-future-work)
 
 ## 🔧 Installation
 
@@ -37,21 +44,17 @@ Note: PyTorch Geometric installation might require specific CUDA versions. Follo
 
 ```
 GML/
-├── data/                    # Data directory
-│   ├── wind_power_sdwpf.csv    # SCADA data
-│   └── turbine_location.CSV    # Turbine location data
-├── models/                  # Model architectures
-│   ├── gru.py                  # GRU model implementation
-│   └── product_graph_gnn.py    # GNN model implementation
-├── config.py               # Configuration parameters
-├── main.py                # Main training script
-├── training.py            # Training loop implementations
-├── evaluation.py          # Model evaluation functions
-├── graph_construction.py  # Graph building utilities
-├── utils.py              # Utility functions
-├── missing_data_handling.py # Missing data interpolation
-├── datasets_stats.py     # Dataset statistics
-└── cleanup.py           # Utility for cleaning model files
+├── data/                        # Downloaded data will be stored here
+│   ├── wind_power_sdwpf.csv     # SCADA data
+│   └── turbine_location.CSV     # Turbine location data
+├── models/                      # Model architectures
+├── images/                      # Output images will be stored here
+├── jupyter_notebooks/           # Jupyter notebooks for dataset exploration and graph construction
+├── output/                      # Outputs of the experiment runs
+├── config.py                    # Configuration parameters
+├── download_data.py             # Script used to download dataset
+├── main.py                      # Main script of pipeline
+├── model-runner.py              # Model runner to automatically run experiments
 ```
 
 ## 🚀 Usage
@@ -64,17 +67,43 @@ Before you can start using the model, you need to download the dataset. This can
 python download_data.py
 ```
 
-### Basic Training
+### Running experiments
 
 Train a model using:
 ```bash
 python main.py [SPATIAL_GRAPH_TYPE] [MODEL_TYPE] [OPTIONS]
 ```
 
-Examples:
+You can customize your experiment by passing the following arguments to `main.py`:
+
+**Positional Arguments**
+- **`spatial_graph_type`**: Type of spatial graph to use. Choices:
+  - `knn` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (K-Nearest Neighbors)
+  - `radius` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Epsilon-ball / radius graph)
+  - `domdir` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Dominant direction graph)
+- **`model_type`**: Model architecture to use. Choices:
+  - `gcn`
+  - `fast-gcn`
+  - `cluster-gcn`
+
+**Optional Arguments**
+- **`--data-subset-turbines`**: Number of turbines to use from the training set (default: -1, use all).
+- **`--data-subset`**: Percentage of the dataset to use for training/validation (e.g. `0.2` for 20%, default: `1.0`).
+- **`--epochs`**: Number of epochs to train the model (default: `40`).
+- **`--dropout-rate`**: Dropout rate for the model (default: `0.35`).
+- **`--hidden-dimensions`**: Number of hidden dimensions in the model (default: `128`).
+- **`--batch-size`**: Batch size for training (default: `32`).
+- **`--patience`**: Early stopping patience (default: `10`).
+- **`--learning-rate`**: Learning rate for the optimizer (default: `0.001`).
+- **`--knn-neighbors`**: Number of neighbors for KNN graph (when `knn` is selected, default: `5`).
+- **`--spatial-radius`**: Radius for spatial graph (when `radius` is selected, default: `1500`).
+- **`--plot-images`**: Plot images during training (flag, default: `False`).
+- **`--image-path`**: Path to save images during training (default: `images/<datetime>`).
+
+**Example**
+Use epsilon-ball (radius) for spatial graph, train a GCN, only use 20% of the dataset and plot images
 ```bash
-# Use epsilon-ball (radius) for spatial graph, train a GCN and only use 20% of the dataset
-python main.py radius gcn --data-subset 0.2
+python main.py radius gcn --data-subset 0.2 --plot-images
 ```
 
 ## 🏃 Model Runner
@@ -85,33 +114,26 @@ If you want to run several models after each other, you can use the model runner
 python model-runner.py [SCHEDULE_FILE]
 ```
 
-This will run all the variations defined in the provided schedule file and store the output to `output/model_runs`.
+This will run all the variations defined in the provided schedule file and store the output to `output/model_runs`. Some examples of schedules can be found in the `schedules/` folder.
 
 ## ⚙️ Configuration
 
-Key parameters in `config.py`:
+Additional parameters can be customized in `config.py`. 
 
-### Data Processing
-- `INPUT_FEATURES`: List of features to use
-- `TARGET_FEATURE`: Target feature to predict (default: 'Patv')
-- `INPUT_SEQUENCE_LENGTH`: Number of past time steps (default: 12)
-- `OUTPUT_SEQUENCE_LENGTH`: Number of future steps to predict (default: 1)
+- **Time Series & Windowing**
+  - `INPUT_SEQUENCE_LENGTH`: Number of past time steps used as input for prediction (e.g., 12 for 2 hours if each step is 10 minutes).
+  - `OUTPUT_SEQUENCE_LENGTH`: Number of future time steps to predict (e.g., 1 for 10 minutes ahead).
 
-### Training Parameters
-- `BATCH_SIZE`: Batch size (default: 64)
-- `LEARNING_RATE`: Learning rate (default: 0.0015)
-- `NUM_EPOCHS`: Maximum epochs (default: 25)
-- `PATIENCE`: Early stopping patience (default: 5)
+- **Dataset Splitting**
+  - `TRAIN_VAL_SPLIT_RATIO`: Fraction of data used for training (rest for validation).
+  - `SHUFFLE_TRAIN_VAL_DATASET`: Whether to shuffle the dataset before splitting.
 
-### Model Parameters
-- `GRU_HIDDEN_DIM`: GRU hidden dimension (default: 32)
-- `GNN_HIDDEN_DIM`: GNN hidden dimension (default: 32)
-- `GNN_NUM_LAYERS`: Number of GNN layers (default: 2)
-- `GNN_DROPOUT`: Dropout rate (default: 0.2)
+- **Graph Construction**
+  - Parameters for spatial graph construction, such as dominant wind direction, edge weights, angle thresholds, and maximum distance for edge creation.
 
-## 📊 Data Format
+## 📊 Data Description
 
-Required data files:
+The following files are used in this project:
 1. `wind_power_sdwpf.csv`: SCADA data with columns:
    - Day: Day number
    - Tmstamp: Time stamp
@@ -124,34 +146,17 @@ Required data files:
    - X: X coordinate
    - Y: Y coordinate
 
-## 🤖 Models
+## 📈 Future Work
 
-### GRU Model
-- Independent GRU for each turbine
-- Predicts future power output based on temporal patterns
-- Handles missing data through interpolation
-  (NOTE: this is not a GNN model but I choose it cause I know that Gated Recurrent Unit (GRU) is a type of recurrent neural network (RNN) that's designed to handle sequential data more effectively than 
-   traditional RNNs. It's particularly useful for tasks like natural language processing, speech recognition, and time series prediction. THIS MODEL REACHED A R^2 score >= 0.95 on the whole dataset (very high)).
+While this repository provides a solid foundation for wind power forecasting—including a flexible pipeline and tools for spatio-temporal graph exploration—the current GNN-based models struggle with accurate forecasting due to a lack of explicit temporal awareness. Although the framework is in place, the models have difficulty capturing temporal dependencies within the data, which limits their predictive performance compared to dedicated temporal models like GRUs.
 
-### GNN Model ((this still does not work perfectly: must be refined also looking at professor suggestions. We might even opt for more than 1 GNN model.)
-- Single model for all turbines
-- Captures both spatial and temporal dependencies
-- Uses product graph structure
-- Handles missing data through joint learning
+Future work could focus on:
+- Integrating more advanced spatio-temporal architectures (e.g., combining GNNs with temporal modules such as GRU/LSTM or Temporal Convolutional Networks).
+- Exploring attention mechanisms or transformer-based models for improved temporal and spatial reasoning.
+- Developing better strategies for handling missing data and improving data interpolation.
+- Benchmarking additional scalable GNN variants and hybrid approaches.
+- Enhancing the interpretability and robustness of the models.
 
-## 📋 Outputs
-
-The models produce:
-1. Trained model checkpoints in `GML/trained_models/`
-2. Predictions in `output/predictions/`
-3. Evaluation metrics in `output/experiment_results.csv`
-4. Optional statistics plots in `output/stats_plots/`
-
-## 📈 Next steps
-
-1. Modify the training pipeline to make it faster (maybe craft a smaller dataset) otherwise we'll take ages to test and train the models.
-2. Work extensively on the GNN model introducing all professor suggestions. For now, there's basically no progress in that direction (see point 3.).
-3. For now I did NOT address scalability, did NOT try suggested architectures like MPNNs / Attention / others, ecc.
-
+We welcome and encourage contributions from the community! If you have ideas for improving temporal modeling, novel graph constructions, or other enhancements, feel free to open an issue or submit a pull request.
 
    
