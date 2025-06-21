@@ -6,7 +6,6 @@ import torch
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import Dataset, DataLoader, Subset
 import os
-from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, INPUT_FEATURES, TARGET_FEATURE, FEATURES_TO_NORMALIZE, MISSING_VALUE_PLACEHOLDER_GNN
 import networkx as nx
 import matplotlib.pyplot as plt
 import csv

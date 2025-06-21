@@ -1,5 +1,5 @@
 import pandas as pd
-from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
+from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 from models.fastGCN import train_fastgcn_from_arrays
 from models.GCN import forecast, train_gcn
 from models.clusterGCN import train_clustergcn_from_arrays

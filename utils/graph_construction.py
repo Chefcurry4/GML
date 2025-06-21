@@ -10,7 +10,7 @@ import pandas as pd
 from utils.static_graphs import build_wake_graph
 from utils.args_interface import GRAPH_TYPE, Args
 from utils.utils import visualize_spatial_graph, visualize_spatio_temporal_graph, visualize_temporal_graph
-from config import DOMDIR_ANGLE_THRESHOLD, DOMDIR_DECAY_LENGTH, DOMDIR_INCLUDE_WEIGHTS, DOMDIR_MAX_DISTANCE, DOMDIR_WIND_DIR, INPUT_SEQUENCE_LENGTH, SPATIAL_GRAPH_TYPE, SPATIAL_RADIUS, K_NEIGHBORS, TEMPORAL_GRAPH_TYPE
+from config import DOMDIR_ANGLE_THRESHOLD, DOMDIR_DECAY_LENGTH, DOMDIR_INCLUDE_WEIGHTS, DOMDIR_MAX_DISTANCE, DOMDIR_WIND_DIR, INPUT_SEQUENCE_LENGTH, TEMPORAL_GRAPH_TYPE
 from torch_geometric.utils import to_undirected, coalesce, remove_self_loops
 import datetime
 import os
