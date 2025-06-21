@@ -1,0 +1,10 @@
+###############################################################################
+# GCN
+# GCN with knn (5)
+knn gcn --knn-neighbors 5 --batch-size 64 --hidden-dimensions 64 --dropout 0.3 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+
+# GCN with knn (10)
+knn gcn --knn-neighbors 10 --batch-size 64 --hidden-dimensions 64 --dropout 0.3 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
+
+# GCN domdir
+domdir gcn --batch-size 64 --hidden-dimensions 64 --dropout 0.3 --learning-rate 0.001 --data-subset 1 --epochs 60 --patience 10 --plot-images
