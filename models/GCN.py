@@ -209,3 +209,23 @@ def train_gcn(
         )
 
     return model, train_losses, val_losses
+
+def forecast(model, X, edge_index, num_turbines):
+    model.eval()
+    with torch.no_grad():
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Prepare a batch of size 1 for inference
+        x_sample = torch.tensor(X, dtype=torch.float32).to(device)
+        edge_index = edge_index.to(device)
+        num_nodes = x_sample.shape[0]
+        batch_info = torch.zeros(num_nodes, dtype=torch.long, device=device)  # All nodes belong to batch 0
+
+        out_batched = model(x_sample, edge_index.to(device), batch_info)  # shape: (1, num_nodes, 1)
+        out_batched = out_batched.squeeze(0)  # shape: (num_nodes, 1)
+
+        last_time_start = (INPUT_SEQUENCE_LENGTH - 1) * num_turbines
+        last_time_end = INPUT_SEQUENCE_LENGTH * num_turbines
+        y_pred = out_batched[last_time_start:last_time_end, 0].cpu().numpy()
+
+        return y_pred

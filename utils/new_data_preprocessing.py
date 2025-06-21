@@ -202,8 +202,8 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
 
     # Plot histograms of the Patv values to see their distribution
     if args.plot_images:
-        plot_data_histogram(X, get_patv_feature_idx(), image_path=args.image_path, filename="patv_histogram_x.png", title="Histogram of Patv Values (X)")
-        plot_data_histogram(X_scaled, get_patv_feature_idx(), image_path=args.image_path, filename="patv_histogram_x_scaled.png", title="Histogram of Scaled Patv Values (X_scaled)")
+        plot_data_histogram(X, get_patv_feature_idx(), image_path=args.image_path, image_name="patv_histogram_x.png", title="Histogram of Patv Values (X)")
+        plot_data_histogram(X_scaled, get_patv_feature_idx(), image_path=args.image_path, image_name="patv_histogram_x_scaled.png", title="Histogram of Scaled Patv Values (X_scaled)")
 
     # Train/val split
     X_train_scaled, X_val_scaled, Y_train_scaled, Y_val_scaled = train_test_split(
