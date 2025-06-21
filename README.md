@@ -1,4 +1,4 @@
-# 🌤️ Wind Power Forecasting with GNN and GRU Models 💨 
+# 🌤️ Wind Power Forecasting with GNN 💨 
 
 Accurate wind power forecasting is essential for reliable integration of renewable energy into modern power markets. This project tackles the dual challenge of modeling both temporal patterns and spatial dependencies between turbines—without relying on expensive physical simulations or sacrificing scalability as wind farms grow.
 
@@ -7,7 +7,7 @@ We investigate the practical scalability and forecasting performance of various 
 This repository provides a comprehensive pipeline for implementing, benchmarking, and experimenting with these GNN models on the [SDWPF dataset](https://pmc.ncbi.nlm.nih.gov/articles/PMC11187227/).
 
 ## 📋 Table of Contents
-- [🌤️ Wind Power Forecasting with GNN and GRU Models 💨](#️-wind-power-forecasting-with-gnn-and-gru-models-)
+- [🌤️ Wind Power Forecasting with GNN 💨](#️-wind-power-forecasting-with-gnn-)
   - [📋 Table of Contents](#-table-of-contents)
   - [🔧 Installation](#-installation)
   - [🏗️ Project Structure](#️-project-structure)
