@@ -248,10 +248,10 @@ def build_graph(locations_df, args: Args):
     
     # Add self loops to edge_index
     # This is necessary for the GCN to also consider the node features of the node themselves for aggregation
-    edge_index, _ = add_self_loops(edge_index)
+    spatio_temporal_edge_index, _ = add_self_loops(spatio_temporal_edge_index)
 
     # Make sure that graph is undirected
-    edge_index = to_undirected(edge_index)
+    spatio_temporal_edge_index = to_undirected(spatio_temporal_edge_index)
 
     print("==========================================================\n")
 
