@@ -14,6 +14,7 @@ from config import DOMDIR_ANGLE_THRESHOLD, DOMDIR_DECAY_LENGTH, DOMDIR_INCLUDE_W
 from torch_geometric.utils import to_undirected, coalesce, remove_self_loops
 import datetime
 import os
+from torch_geometric.utils import to_undirected, add_self_loops
 
 def build_spatial_graph(location_df, args):
     """
@@ -245,6 +246,13 @@ def build_graph(locations_df, args: Args):
     if spatio_temporal_edge_index.numel() == 0 and num_turbines > 0 and INPUT_SEQUENCE_LENGTH > 0:
         raise RuntimeError("Warning: Product graph template is empty, but data exists. Check graph construction parameters.")
     
+    # Add self loops to edge_index
+    # This is necessary for the GCN to also consider the node features of the node themselves for aggregation
+    edge_index, _ = add_self_loops(edge_index)
+
+    # Make sure that graph is undirected
+    edge_index = to_undirected(edge_index)
+
     print("==========================================================\n")
 
     return spatio_temporal_edge_index
