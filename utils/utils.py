@@ -713,3 +713,20 @@ def plot_data_histogram(data, feature_idx, image_path="images", image_name="x_sc
     save_path = os.path.join(image_path, image_name)
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
+
+def forecast(model, X, edge_index, num_turbines):
+    """
+    Dispatches to the correct forecast method depending on the model class.
+    """
+    model_name = model.__class__.__name__.lower()
+    if "clustergcn" in model_name:
+        from models.clusterGCN import forecast as cluster_forecast
+        return cluster_forecast(model, X, edge_index, num_turbines)
+    elif "fastgcn" in model_name:
+        from models.fastGCN import forecast as fastgcn_forecast
+        return fastgcn_forecast(model, X, edge_index, num_turbines)
+    elif "gcn" in model_name:
+        from models.GCN import forecast as gcn_forecast
+        return gcn_forecast(model, X, edge_index, num_turbines)
+    else:
+        raise ValueError(f"Unknown model type for forecasting: {model.__class__.__name__}")

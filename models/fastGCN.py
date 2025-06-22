@@ -216,6 +216,28 @@ def train_fastgcn_from_arrays(
 
     return model, train_losses, val_losses
 
+def forecast(model, X, edge_index, num_turbines):
+    """
+    Forecast the power output for a single sample using the trained FastGCN model.
+    Args:
+        model: Trained FastGCN model
+        X: Input features for the sample, shape (num_nodes, num_features)
+        edge_index: Edge indices for the product graph
+        num_turbines: Number of turbines (for extracting last time step)
+    Returns:
+        y_pred: Predicted power output for each turbine at the last time step, shape (num_turbines,)
+    """
+    model.eval()
+    with torch.no_grad():
+        device = next(model.parameters()).device
+        x_sample = torch.tensor(X, dtype=torch.float32, device=device).unsqueeze(0)  # (1, num_nodes, num_features)
+        edge_index = edge_index.to(device)
+        # Forward pass
+        out = model(x_sample, (edge_index, None))  # (1, num_turbines)
+        y_pred = out.squeeze(0).cpu().numpy()  # (num_turbines,)
+        return y_pred
+       
+
 # ======= Example Entry Point =======
 if __name__ == "__main__":  
     edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]], dtype=torch.long)

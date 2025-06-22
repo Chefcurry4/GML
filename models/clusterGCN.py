@@ -235,3 +235,31 @@ def train_clustergcn_from_arrays(
     )
 
     return model, train_losses, val_losses
+
+def forecast(model, X, edge_index, num_turbines):
+    """
+    Forecast the power output for a single sample using the trained ClusterGCN model.
+    Args:
+        model: Trained ClusterGCN model
+        X: Input features for the sample, shape (num_nodes, num_features)
+        edge_index: Edge indices for the product graph
+        num_turbines: Number of turbines (for extracting last time step)
+    Returns:
+        y_pred: Predicted power output for each turbine at the last time step, shape (num_turbines,)
+    """
+    model.eval()
+    with torch.no_grad():
+        device = next(model.parameters()).device
+        x_sample = torch.tensor(X, dtype=torch.float32, device=device).unsqueeze(0)  # (1, num_nodes, num_features)
+        edge_index = edge_index.to(device)
+
+        # Forward pass
+        out = model(x_sample, edge_index)  # (1, num_nodes)
+        out = out.squeeze(0)  # (num_nodes,)
+
+        # Extract predictions for the last time step
+        from config import INPUT_SEQUENCE_LENGTH
+        last_time_start = (INPUT_SEQUENCE_LENGTH - 1) * num_turbines
+        last_time_end = INPUT_SEQUENCE_LENGTH * num_turbines
+        y_pred = out[last_time_start:last_time_end].cpu().numpy() # (num_turbines,)
+        return y_pred

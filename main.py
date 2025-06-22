@@ -1,13 +1,13 @@
 import pandas as pd
 from config import INPUT_SEQUENCE_LENGTH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 from models.fastGCN import train_fastgcn_from_arrays
-from models.GCN import forecast, train_gcn
+from models.GCN import train_gcn
 from models.clusterGCN import train_clustergcn_from_arrays
 from utils.new_data_preprocessing import get_patv_feature_idx, load_and_preprocess_data
 from utils.graph_construction import build_graph
 from utils.args_interface import parse_args
 import os
-from utils.utils import plot_power_output_and_prediction
+from utils.utils import plot_power_output_and_prediction, forecast
 
 def main():
     # Load the arguments passed from the command line
