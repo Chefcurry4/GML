@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 # ADDED: Import StandardScaler for feature and target scaling
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import RobustScaler, StandardScaler
 from config import INPUT_SEQUENCE_LENGTH, LOCATION_DATA_PATH, OUTPUT_SEQUENCE_LENGTH, SCADA_DATA_PATH, SHUFFLE_TRAIN_VAL_DATASET, TRAIN_VAL_SPLIT_RATIO
 from utils.utils import plot_data_histogram, plot_power_output
 
@@ -178,31 +178,27 @@ def load_and_preprocess_data(csv_path, input_len=12, output_len=1, train_val_rat
     if np.isnan(data).any():
         raise ValueError("Data still contains NaN values after interpolation. This might happen if an entire column is NaN.")
 
+    # Scale the data before creating sliding windows
+    print("Scaling data...")
+    data_scaler = RobustScaler()
+    num_samples, turbines, features = data.shape
+    data_2d = data.reshape(-1, features)  # new shape: (num_samples * turbines, features)
+    data_scaled_2d = data_scaler.fit_transform(data_2d)
+    data_scaled = data_scaled_2d.reshape(num_samples, turbines, features) # back to shape: (num_samples, turbines, features)
+
     # Create feature and target sequences
-    X, Y = sliding_window(data, input_len, output_len)
-    print(f"Sliding window created: X shape {X.shape}, Y shape {Y.shape}")
+    X_scaled, Y_scaled = sliding_window(data_scaled, input_len, output_len)
+    print(f"Sliding window created: X shape {X_scaled.shape}, Y shape {Y_scaled.shape}")
 
     # Flatten X and Y
-    num_samples, sliding_window_size, num_turbines, features_per_turbine = X.shape
-    X = X.reshape(num_samples, sliding_window_size * num_turbines, features_per_turbine)
-    Y = Y.reshape(num_samples, -1) # Flatten Y to 2D for scaler
-    print(f"Flattened X shape: {X.shape}")
-    print(f"Flattened Y shape: {Y.shape}")
-
-    # Scale data
-    print("Scaling features and target variable...")
-    x_scaler = StandardScaler()
-    # Reshape to 2D for scaler, fit on training data, then transform and reshape back to 3D
-    # Scale X
-    nsamples, nsteps, nfeatures = X.shape
-    X_scaled = x_scaler.fit_transform(X.reshape(-1, nfeatures)).reshape(nsamples, nsteps, nfeatures)
-    # Scale Y
-    y_scaler = StandardScaler()
-    Y_scaled = y_scaler.fit_transform(Y)
+    num_samples, sliding_window_size, num_turbines, features_per_turbine = X_scaled.shape
+    X_scaled = X_scaled.reshape(num_samples, sliding_window_size * num_turbines, features_per_turbine)
+    Y_scaled = Y_scaled.reshape(num_samples, -1) # Flatten Y to 2D for scaler
+    print(f"Flattened X shape: {X_scaled.shape}")
+    print(f"Flattened Y shape: {Y_scaled.shape}")
 
     # Plot histograms of the Patv values to see their distribution
     if args.plot_images:
-        plot_data_histogram(X, get_patv_feature_idx(), image_path=args.image_path, image_name="patv_histogram_x.png", title="Histogram of Patv Values (X)")
         plot_data_histogram(X_scaled, get_patv_feature_idx(), image_path=args.image_path, image_name="patv_histogram_x_scaled.png", title="Histogram of Scaled Patv Values (X_scaled)")
 
     # Train/val split
